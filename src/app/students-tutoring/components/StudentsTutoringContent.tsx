@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Search, Plus, User, AlertTriangle, MessageSquare, Calendar, X, Edit2, Clock, ExternalLink, Check, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '@/components/ui/PageHeader';
@@ -186,22 +187,28 @@ export default function StudentsTutoringContent() {
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-thin bg-card rounded-xl border border-border shadow-card">
               {filtered.map((student) => (
-                <button key={student.id} onClick={() => setSelectedStudent(student)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 border-b border-border last:border-0 hover:bg-muted/40 transition-colors text-left ${selectedStudent?.id === student.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${student.riskLevel === 'high' ? 'bg-red-100 text-danger' : student.riskLevel === 'medium' ? 'bg-amber-100 text-warning' : 'bg-muted text-muted-foreground'}`}>
-                    {student.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{student.name}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">{student.nia}</p>
-                  </div>
-                  <div className="flex-shrink-0 text-right">
-                    <p className={`text-xs font-bold font-mono-nums ${getGradeColor(student.moduleGrade)}`}>{getGradeLabel(student.moduleGrade)}</p>
-                    {(student.riskLevel === 'high' || student.riskLevel === 'medium') && (
-                      <AlertTriangle size={10} className={`${student.riskLevel === 'high' ? 'text-danger' : 'text-warning'} ml-auto mt-0.5`} />
-                    )}
-                  </div>
-                </button>
+                <div key={student.id}
+                  className={`w-full flex items-center gap-2 px-3 py-2 border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${selectedStudent?.id === student.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}>
+                  <button onClick={() => setSelectedStudent(student)} className="flex flex-1 min-w-0 items-center gap-3 py-1 text-left">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${student.riskLevel === 'high' ? 'bg-red-100 text-danger' : student.riskLevel === 'medium' ? 'bg-amber-100 text-warning' : 'bg-muted text-muted-foreground'}`}>
+                      {student.avatar}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{student.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{student.nia}</p>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className={`text-xs font-bold font-mono-nums ${getGradeColor(student.moduleGrade)}`}>{getGradeLabel(student.moduleGrade)}</p>
+                      {(student.riskLevel === 'high' || student.riskLevel === 'medium') && (
+                        <AlertTriangle size={10} className={`${student.riskLevel === 'high' ? 'text-danger' : 'text-warning'} ml-auto mt-0.5`} />
+                      )}
+                    </div>
+                  </button>
+                  <Link href={`/students-tutoring/${student.id}`} aria-label={`Abrir ficha de ${student.name}`}
+                    className="flex flex-shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1.5 text-[10px] font-semibold text-primary hover:bg-primary/5">
+                    <ExternalLink size={11} /> Ficha
+                  </Link>
+                </div>
               ))}
               {filtered.length === 0 && (
                 <div className="flex flex-col items-center py-8 text-center px-4">

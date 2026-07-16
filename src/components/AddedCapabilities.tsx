@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import {
@@ -257,13 +258,60 @@ export function SeatingFeature() {
   const [seats, setSeats] = useState<SeatMap>({});
   const [rows, setRows] = useState(3);
   const [columns, setColumns] = useState(5);
+  const [draggedStudentId, setDraggedStudentId] = useState<string | null>(null);
+  const [draggedSeatId, setDraggedSeatId] = useState<string | null>(null);
+  const [status, setStatus] = useState('Arrastra un alumno hasta su puesto.');
   useEffect(() => { setSeats(readStored(storageKey, {})); const dimensions = readStored(dimensionKey, { rows: 3, columns: 5 }); setRows(dimensions.rows); setColumns(dimensions.columns); }, [dimensionKey, storageKey]);
   const persist = (next: SeatMap) => { setSeats(next); localStorage.setItem(storageKey, JSON.stringify(next)); };
-  const assign = (seat: string, studentId: string) => { const next = { ...seats }; Object.keys(next).forEach(key => { if (next[key] === studentId) delete next[key]; }); if (studentId) next[seat] = studentId; else delete next[seat]; persist(next); };
+  const clearDrag = () => { setDraggedStudentId(null); setDraggedSeatId(null); };
+  const assign = (targetSeat: string, studentId: string) => {
+    const next = { ...seats };
+    const sourceSeat = Object.keys(next).find(seat => next[seat] === studentId);
+    const targetStudent = next[targetSeat];
+    if (sourceSeat && sourceSeat !== targetSeat) {
+      if (targetStudent) next[sourceSeat] = targetStudent;
+      else delete next[sourceSeat];
+    }
+    next[targetSeat] = studentId;
+    persist(next);
+    clearDrag();
+    setStatus(sourceSeat && targetStudent ? 'Alumnos intercambiados.' : 'Puesto actualizado.');
+  };
+  const unassign = (seat: string) => {
+    const next = { ...seats };
+    delete next[seat];
+    persist(next);
+    clearDrag();
+    setStatus('Alumno devuelto a la lista de pendientes.');
+  };
   const saveDimensions = (nextRows: number, nextColumns: number) => { setRows(nextRows); setColumns(nextColumns); localStorage.setItem(dimensionKey, JSON.stringify({ rows: nextRows, columns: nextColumns })); };
-  return <Panel title="Plano del aula" description="Configura la cuadrícula y asigna un alumno a cada puesto; los cambios se guardan por módulo." actions={<button className="text-xs text-danger" onClick={() => persist({})}>Vaciar plano</button>}>
+  const pendingStudents = students.filter(student => !Object.values(seats).includes(student.id));
+  const seatIds = Array.from({ length: rows * columns }, (_, index) => `P${index + 1}`);
+  return <Panel title="Aula · Distribución de puestos" description="Arrastra al alumnado a un puesto, intercambia dos puestos o suelta un alumno en pendientes para liberarlo. La distribución se guarda por módulo." actions={<button className="text-xs text-danger" onClick={() => { persist({}); setStatus('Plano vaciado.'); }}>Vaciar plano</button>}>
     <div className="flex flex-wrap gap-4 mb-5"><label className="text-xs">Filas<input type="number" min="1" max="8" className={`${inputClass} mt-1 w-24`} value={rows} onChange={e => saveDimensions(Math.max(1, Number(e.target.value)), columns)} /></label><label className="text-xs">Columnas<input type="number" min="1" max="10" className={`${inputClass} mt-1 w-24`} value={columns} onChange={e => saveDimensions(rows, Math.max(1, Number(e.target.value)))} /></label><div className="flex-1 min-w-48 self-end text-center py-2 rounded bg-muted text-xs font-semibold">PIZARRA</div></div>
-    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(130px, 1fr))` }}>{Array.from({ length: rows * columns }, (_, index) => `P${index + 1}`).map(seat => <div key={seat} className="border border-border rounded-lg p-3"><div className="flex items-center gap-2 mb-2"><Armchair size={15} className="text-primary" /><span className="text-xs font-semibold">{seat}</span></div><select className={`${inputClass} text-xs`} value={seats[seat] || ''} onChange={e => assign(seat, e.target.value)}><option value="">Libre</option>{students.map(student => <option key={student.id} value={student.id} disabled={Object.values(seats).includes(student.id) && seats[seat] !== student.id}>{student.name}</option>)}</select></div>)}</div>
+    <p className="mb-4 text-xs text-muted-foreground" aria-live="polite">{status}</p>
+    <div className="grid xl:grid-cols-[minmax(0,1fr)_280px] gap-5">
+      <div className="overflow-x-auto pb-2">
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columns}, minmax(140px, 1fr))`, minWidth: `${columns * 150}px` }}>
+          {seatIds.map(seat => { const student = students.find(candidate => candidate.id === seats[seat]); return <div key={seat}
+            draggable={Boolean(student)}
+            onDragStart={() => { if (!student) return; setDraggedStudentId(student.id); setDraggedSeatId(seat); setStatus(`Moviendo a ${student.name}.`); }}
+            onDragEnd={clearDrag}
+            onDragOver={event => event.preventDefault()}
+            onDrop={() => draggedStudentId && assign(seat, draggedStudentId)}
+            onDoubleClick={() => student && unassign(seat)}
+            className={`min-h-28 rounded-xl border-2 p-3 transition-colors ${student ? 'cursor-grab border-primary/30 bg-primary/5 active:cursor-grabbing' : 'border-dashed border-border bg-muted/20'} ${draggedSeatId === seat ? 'opacity-50' : ''}`}>
+            <div className="flex items-center justify-between gap-2 mb-3"><span className="flex items-center gap-1.5 text-xs font-semibold"><Armchair size={15} className="text-primary" />{seat}</span>{student && <button type="button" className="text-[10px] text-danger hover:underline" onClick={() => unassign(seat)}>Quitar</button>}</div>
+            {student ? <div className="flex items-center gap-2"><div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">{student.avatar}</div><div className="min-w-0"><p className="truncate text-xs font-semibold">{student.name}</p><Link href={`/students-tutoring/${student.id}`} onClick={event => event.stopPropagation()} className="text-[10px] font-semibold text-primary hover:underline">Ver ficha</Link></div></div> : <div className="flex h-12 items-center justify-center text-center text-[11px] text-muted-foreground">Arrastra un alumno aquí</div>}
+          </div>; })}
+        </div>
+      </div>
+      <aside onDragOver={event => event.preventDefault()} onDrop={() => draggedSeatId && unassign(draggedSeatId)} className="rounded-xl border border-border bg-muted/20 p-3">
+        <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">Pendientes de colocar</h3><span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">{pendingStudents.length}</span></div>
+        <div className="space-y-2">{pendingStudents.map(student => <div key={student.id} draggable onDragStart={() => { setDraggedStudentId(student.id); setDraggedSeatId(null); setStatus(`Colocando a ${student.name}.`); }} onDragEnd={clearDrag} className="flex cursor-grab items-center gap-2 rounded-lg border border-border bg-card p-2 active:cursor-grabbing"><div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">{student.avatar}</div><div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{student.name}</p><p className="text-[10px] text-muted-foreground">NIA {student.nia}</p></div><Link href={`/students-tutoring/${student.id}`} className="text-[10px] font-semibold text-primary hover:underline">Ficha</Link></div>)}{pendingStudents.length === 0 && <p className="py-5 text-center text-xs text-muted-foreground">Todo el alumnado está colocado.</p>}</div>
+        <p className="mt-4 border-t border-border pt-3 text-[10px] leading-relaxed text-muted-foreground">También puedes hacer doble clic en un puesto ocupado para liberarlo.</p>
+      </aside>
+    </div>
   </Panel>;
 }
 
@@ -274,6 +322,13 @@ export function CorrectionsFeature() {
   const [submission, setSubmission] = useState('');
   const [result, setResult] = useState<{ grade: number; feedback: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedActivity = params.get('activity');
+    const requestedStudent = params.get('student');
+    if (requestedActivity) setActivityId(requestedActivity);
+    if (requestedStudent) setStudentId(requestedStudent);
+  }, []);
   const selectedActivity = activities.find(activity => activity.id === activityId);
   const existingGrade = grades.find(grade => grade.activityId === activityId && grade.studentId === studentId)?.grade;
   const correct = async () => {
