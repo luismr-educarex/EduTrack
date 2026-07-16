@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --primary: #2563EB;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #475569;
+  --accent: #0891B2;
+  --accent-foreground: #FFFFFF;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #2563EB;
+  --radius: 8px;
+  --font-sans: var(--font-ibm-plex-sans), 'IBM Plex Sans', sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), 'IBM Plex Mono', monospace;
+
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --info: #0891B2;
+  --info-bg: #ECFEFF;
+  --neutral: #64748B;
+  --neutral-bg: #F8FAFC;
+
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 60px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .font-mono-nums {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grade-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .sidebar-transition {
+    transition: width 300ms ease, opacity 200ms ease;
+  }
+
+  .fade-in {
+    animation: fadeIn 200ms ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-up {
+    animation: slideUp 200ms ease forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .highlight-pulse {
+    animation: highlightPulse 600ms ease;
+  }
+
+  @keyframes highlightPulse {
+    0% { background-color: transparent; }
+    30% { background-color: #FEF9C3; }
+    100% { background-color: transparent; }
+  }
+
+  .status-superado {
+    background-color: var(--success-bg);
+    color: var(--success);
+    border: 1px solid #BBF7D0;
+  }
+
+  .status-parcial {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid #FDE68A;
+  }
+
+  .status-no-superado {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid #FECACA;
+  }
+
+  .status-no-evaluado {
+    background-color: var(--neutral-bg);
+    color: var(--neutral);
+    border: 1px solid var(--border);
+  }
+
+  .grade-superado { color: var(--success); }
+  .grade-aprobado { color: #65A30D; }
+  .grade-notable { color: var(--info); }
+  .grade-sobresaliente { color: var(--primary); }
+  .grade-suspenso { color: var(--danger); }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 3px;
+  }
+
+  .activity-borrador { background-color: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+  .activity-publicada { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+  .activity-en-correccion { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+  .activity-pendiente-revision { background-color: #FEF3C7; color: #B45309; border: 1px solid #FCD34D; }
+  .activity-revisada-docente { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+  .activity-cerrada { background-color: #F0FDF4; color: #16A34A; border: 1px solid #BBF7D0; }
+
+  .text-hero-xl {
+    font-size: clamp(1.5rem, 2.5vw, 2rem);
+    font-weight: 700;
+  }
+
+  .metric-value {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+}

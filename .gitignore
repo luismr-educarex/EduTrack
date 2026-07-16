@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+# The lockfile is required for reproducible Docker builds.
+
+# Next.js build output
+.next/
+out/
+
+# Production build
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Vercel deployment
+.vercel/
+
+# Local credentials and reference source not used by the production build
+.env
+.env.*
+!.env.example
+/aulatrack/
+
+# Optional: if using TypeScript
+*.tsbuildinfo
+
+# Optional: if using testing tools
+coverage/
+jest-test-results.json
+
+# Optional: if using IDEs
+.vscode/
+.idea/
+
+# Optional: if using TurboRepo or monorepo
+turbo/

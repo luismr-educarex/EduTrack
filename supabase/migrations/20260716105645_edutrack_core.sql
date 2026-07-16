@@ -1,0 +1,415 @@
+-- EduTrack Core Schema Migration
+-- Tables: modules, evaluations, learning_outcomes, criteria, work_units, activities,
+--         students, activity_grades, ra_relationships, incidents, session_logs,
+--         tutoring_actions, calendar_events
+
+-- ─── TYPES ────────────────────────────────────────────────────────────────────
+DROP TYPE IF EXISTS public.difficulty_level CASCADE;
+CREATE TYPE public.difficulty_level AS ENUM ('básico', 'medio', 'avanzado');
+
+DROP TYPE IF EXISTS public.activity_status CASCADE;
+CREATE TYPE public.activity_status AS ENUM ('borrador', 'publicada', 'en_correccion', 'pendiente_revision', 'revisada_docente', 'cerrada');
+
+DROP TYPE IF EXISTS public.unit_status CASCADE;
+CREATE TYPE public.unit_status AS ENUM ('pendiente', 'en_curso', 'impartida');
+
+DROP TYPE IF EXISTS public.risk_level CASCADE;
+CREATE TYPE public.risk_level AS ENUM ('high', 'medium', 'low', 'none');
+
+DROP TYPE IF EXISTS public.incident_type CASCADE;
+CREATE TYPE public.incident_type AS ENUM ('aviso', 'observación', 'positivo', 'falta');
+
+DROP TYPE IF EXISTS public.tutoring_type CASCADE;
+CREATE TYPE public.tutoring_type AS ENUM ('entrevista', 'acuerdo', 'observación', 'seguimiento');
+
+DROP TYPE IF EXISTS public.event_type CASCADE;
+CREATE TYPE public.event_type AS ENUM ('entrega', 'examen', 'tutoría', 'festivo', 'reunión', 'otro');
+
+DROP TYPE IF EXISTS public.eval_type CASCADE;
+CREATE TYPE public.eval_type AS ENUM ('parcial', 'final', 'ordinaria', 'extraordinaria');
+
+-- ─── CORE TABLES ──────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.modules (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  code TEXT NOT NULL,
+  cycle TEXT NOT NULL,
+  course TEXT,
+  evaluation_count INTEGER DEFAULT 2,
+  total_students INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.evaluations (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  eval_type public.eval_type DEFAULT 'parcial',
+  weight INTEGER DEFAULT 50,
+  start_date DATE,
+  end_date DATE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.learning_outcomes (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  description TEXT NOT NULL,
+  weight INTEGER DEFAULT 20,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.criteria (
+  id TEXT PRIMARY KEY,
+  ra_id TEXT REFERENCES public.learning_outcomes(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  description TEXT NOT NULL,
+  difficulty public.difficulty_level DEFAULT 'medio',
+  weight INTEGER DEFAULT 20,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.work_units (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  evaluation_id TEXT REFERENCES public.evaluations(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  hours INTEGER DEFAULT 0,
+  taught_percentage INTEGER DEFAULT 0,
+  unit_status public.unit_status DEFAULT 'pendiente',
+  weight INTEGER DEFAULT 50,
+  ra_ids TEXT[] DEFAULT '{}',
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.activities (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  unit_id TEXT REFERENCES public.work_units(id) ON DELETE SET NULL,
+  evaluation_id TEXT REFERENCES public.evaluations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  activity_type TEXT DEFAULT 'práctica',
+  activity_status public.activity_status DEFAULT 'borrador',
+  weight INTEGER DEFAULT 30,
+  due_date DATE,
+  description TEXT,
+  ce_ids TEXT[] DEFAULT '{}',
+  correction_count INTEGER DEFAULT 0,
+  reviewed_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.students (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  nia TEXT NOT NULL,
+  name TEXT NOT NULL,
+  avatar TEXT,
+  email TEXT,
+  github_url TEXT,
+  module_grade NUMERIC(4,2),
+  eval1_grade NUMERIC(4,2),
+  eval2_grade NUMERIC(4,2),
+  risk_level public.risk_level DEFAULT 'none',
+  ce_superado INTEGER DEFAULT 0,
+  ce_parcial INTEGER DEFAULT 0,
+  ce_no_superado INTEGER DEFAULT 0,
+  ce_no_evaluado INTEGER DEFAULT 0,
+  incidents INTEGER DEFAULT 0,
+  absences INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.activity_grades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id TEXT REFERENCES public.students(id) ON DELETE CASCADE,
+  activity_id TEXT REFERENCES public.activities(id) ON DELETE CASCADE,
+  grade NUMERIC(4,2),
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, activity_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.ra_relationships (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  ra_source_id TEXT REFERENCES public.learning_outcomes(id) ON DELETE CASCADE,
+  ra_target_id TEXT REFERENCES public.learning_outcomes(id) ON DELETE CASCADE,
+  percentage INTEGER DEFAULT 25,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.incidents (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES public.students(id) ON DELETE CASCADE,
+  student_name TEXT,
+  incident_date DATE NOT NULL,
+  incident_type public.incident_type DEFAULT 'observación',
+  detail TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.session_logs (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  unit_id TEXT REFERENCES public.work_units(id) ON DELETE SET NULL,
+  log_date DATE NOT NULL,
+  development TEXT,
+  homework TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.tutoring_actions (
+  id TEXT PRIMARY KEY,
+  student_id TEXT REFERENCES public.students(id) ON DELETE CASCADE,
+  action_date DATE NOT NULL,
+  tutoring_type public.tutoring_type DEFAULT 'observación',
+  content TEXT,
+  follow_up TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public.calendar_events (
+  id TEXT PRIMARY KEY,
+  module_id TEXT REFERENCES public.modules(id) ON DELETE CASCADE,
+  event_date DATE NOT NULL,
+  title TEXT NOT NULL,
+  event_type public.event_type DEFAULT 'otro',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ─── INDEXES ──────────────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_evaluations_module_id ON public.evaluations(module_id);
+CREATE INDEX IF NOT EXISTS idx_learning_outcomes_module_id ON public.learning_outcomes(module_id);
+CREATE INDEX IF NOT EXISTS idx_criteria_ra_id ON public.criteria(ra_id);
+CREATE INDEX IF NOT EXISTS idx_work_units_module_id ON public.work_units(module_id);
+CREATE INDEX IF NOT EXISTS idx_work_units_evaluation_id ON public.work_units(evaluation_id);
+CREATE INDEX IF NOT EXISTS idx_activities_module_id ON public.activities(module_id);
+CREATE INDEX IF NOT EXISTS idx_activities_unit_id ON public.activities(unit_id);
+CREATE INDEX IF NOT EXISTS idx_activities_evaluation_id ON public.activities(evaluation_id);
+CREATE INDEX IF NOT EXISTS idx_students_module_id ON public.students(module_id);
+CREATE INDEX IF NOT EXISTS idx_activity_grades_student_id ON public.activity_grades(student_id);
+CREATE INDEX IF NOT EXISTS idx_activity_grades_activity_id ON public.activity_grades(activity_id);
+CREATE INDEX IF NOT EXISTS idx_ra_relationships_module_id ON public.ra_relationships(module_id);
+CREATE INDEX IF NOT EXISTS idx_incidents_student_id ON public.incidents(student_id);
+CREATE INDEX IF NOT EXISTS idx_session_logs_module_id ON public.session_logs(module_id);
+CREATE INDEX IF NOT EXISTS idx_tutoring_actions_student_id ON public.tutoring_actions(student_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_module_id ON public.calendar_events(module_id);
+
+-- ─── RLS ──────────────────────────────────────────────────────────────────────
+ALTER TABLE public.modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.evaluations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.learning_outcomes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.criteria ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.work_units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_grades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ra_relationships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.incidents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.session_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tutoring_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- Open access policies (teacher tool, no per-user isolation needed)
+DROP POLICY IF EXISTS "open_access_modules" ON public.modules;
+CREATE POLICY "open_access_modules" ON public.modules FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_evaluations" ON public.evaluations;
+CREATE POLICY "open_access_evaluations" ON public.evaluations FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_learning_outcomes" ON public.learning_outcomes;
+CREATE POLICY "open_access_learning_outcomes" ON public.learning_outcomes FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_criteria" ON public.criteria;
+CREATE POLICY "open_access_criteria" ON public.criteria FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_work_units" ON public.work_units;
+CREATE POLICY "open_access_work_units" ON public.work_units FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_activities" ON public.activities;
+CREATE POLICY "open_access_activities" ON public.activities FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_students" ON public.students;
+CREATE POLICY "open_access_students" ON public.students FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_activity_grades" ON public.activity_grades;
+CREATE POLICY "open_access_activity_grades" ON public.activity_grades FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_ra_relationships" ON public.ra_relationships;
+CREATE POLICY "open_access_ra_relationships" ON public.ra_relationships FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_incidents" ON public.incidents;
+CREATE POLICY "open_access_incidents" ON public.incidents FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_session_logs" ON public.session_logs;
+CREATE POLICY "open_access_session_logs" ON public.session_logs FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_tutoring_actions" ON public.tutoring_actions;
+CREATE POLICY "open_access_tutoring_actions" ON public.tutoring_actions FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "open_access_calendar_events" ON public.calendar_events;
+CREATE POLICY "open_access_calendar_events" ON public.calendar_events FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- ─── SEED DATA ────────────────────────────────────────────────────────────────
+DO $$
+BEGIN
+  -- Modules
+  INSERT INTO public.modules (id, name, code, cycle, course, evaluation_count, total_students) VALUES
+    ('module-ruslvg5ye', 'Programación de Servicios y Procesos', 'PSP', 'DAM 2º', '2025–2026', 2, 22),
+    ('module-abc123', 'Acceso a Datos', 'AD', 'DAM 2º', '2025–2026', 2, 22),
+    ('module-def456', 'Desarrollo de Interfaces', 'DI', 'DAM 2º', '2025–2026', 2, 22)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Evaluations
+  INSERT INTO public.evaluations (id, module_id, name, eval_type, weight, start_date, end_date) VALUES
+    ('eval-1', 'module-ruslvg5ye', '1ª Evaluación', 'parcial', 40, '2025-09-15', '2025-12-20'),
+    ('eval-2', 'module-ruslvg5ye', '2ª Evaluación', 'parcial', 60, '2026-01-08', '2026-05-30')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Learning Outcomes
+  INSERT INTO public.learning_outcomes (id, module_id, code, description, weight, sort_order) VALUES
+    ('ra-1', 'module-ruslvg5ye', 'RA1', 'Desarrolla aplicaciones multiproceso, identificando y aplicando mecanismos de gestión de procesos del sistema operativo.', 20, 1),
+    ('ra-2', 'module-ruslvg5ye', 'RA2', 'Desarrolla aplicaciones compuestas por varios hilos de ejecución analizando y aplicando librerías específicas del lenguaje utilizado.', 25, 2),
+    ('ra-3', 'module-ruslvg5ye', 'RA3', 'Programa mecanismos de comunicación en red empleando sockets y analizando el escenario de ejecución.', 25, 3),
+    ('ra-4', 'module-ruslvg5ye', 'RA4', 'Desarrolla aplicaciones que ofrecen servicios en red, utilizando librerías de clases y aplicando criterios de eficiencia y disponibilidad.', 20, 4),
+    ('ra-5', 'module-ruslvg5ye', 'RA5', 'Protege las aplicaciones y los datos definiendo y aplicando criterios de seguridad en el acceso, almacenamiento y transmisión de la información.', 10, 5)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Criteria
+  INSERT INTO public.criteria (id, ra_id, code, description, difficulty, weight, sort_order) VALUES
+    ('ce-1a', 'ra-1', 'RA1.a', 'Se han identificado los estados de un proceso y las transiciones entre ellos.', 'básico', 15, 1),
+    ('ce-1b', 'ra-1', 'RA1.b', 'Se han utilizado clases para programar aplicaciones que crean subprocesos.', 'medio', 20, 2),
+    ('ce-1c', 'ra-1', 'RA1.c', 'Se han utilizado mecanismos para sincronizar y obtener el valor retornado por los subprocesos iniciados.', 'medio', 20, 3),
+    ('ce-1d', 'ra-1', 'RA1.d', 'Se han utilizado clases que permiten gestionar la información entre procesos.', 'medio', 20, 4),
+    ('ce-1e', 'ra-1', 'RA1.e', 'Se han desarrollado aplicaciones que ejecutan órdenes del sistema operativo.', 'avanzado', 25, 5),
+    ('ce-2a', 'ra-2', 'RA2.a', 'Se han identificado situaciones en las que resulta útil la utilización de varios hilos en un programa.', 'básico', 10, 1),
+    ('ce-2b', 'ra-2', 'RA2.b', 'Se han utilizado clases para programar aplicaciones que crean hilos.', 'medio', 20, 2),
+    ('ce-2c', 'ra-2', 'RA2.c', 'Se han compartido objetos y datos entre los hilos de un mismo proceso.', 'medio', 20, 3),
+    ('ce-2d', 'ra-2', 'RA2.d', 'Se han utilizado mecanismos para evitar problemas de concurrencia.', 'avanzado', 25, 4),
+    ('ce-2e', 'ra-2', 'RA2.e', 'Se han depurado y documentado las aplicaciones desarrolladas.', 'medio', 25, 5),
+    ('ce-3a', 'ra-3', 'RA3.a', 'Se han identificado las características y campos de aplicación de los sockets.', 'básico', 15, 1),
+    ('ce-3b', 'ra-3', 'RA3.b', 'Se han utilizado sockets para programar una aplicación cliente que se comunica con un servidor.', 'medio', 25, 2),
+    ('ce-3c', 'ra-3', 'RA3.c', 'Se ha desarrollado una aplicación servidora que admite conexiones de múltiples clientes.', 'avanzado', 30, 3),
+    ('ce-3d', 'ra-3', 'RA3.d', 'Se han utilizado hilos para implementar los procedimientos de las aplicaciones.', 'medio', 15, 4),
+    ('ce-3e', 'ra-3', 'RA3.e', 'Se han utilizado sockets UDP en la realización de aplicaciones que transmiten texto o archivos.', 'medio', 15, 5),
+    ('ce-4a', 'ra-4', 'RA4.a', 'Se han identificado las características propias de los servicios web y su papel en la arquitectura cliente-servidor.', 'básico', 15, 1),
+    ('ce-4b', 'ra-4', 'RA4.b', 'Se han utilizado servicios REST para intercambiar información entre aplicaciones.', 'avanzado', 30, 2),
+    ('ce-4c', 'ra-4', 'RA4.c', 'Se ha programado un servicio REST sencillo con autenticación básica.', 'avanzado', 30, 3),
+    ('ce-4d', 'ra-4', 'RA4.d', 'Se han documentado los servicios web desarrollados.', 'medio', 25, 4),
+    ('ce-5a', 'ra-5', 'RA5.a', 'Se han identificado y aplicado mecanismos de autenticación y autorización.', 'medio', 40, 1),
+    ('ce-5b', 'ra-5', 'RA5.b', 'Se han utilizado protocolos seguros en la transmisión de datos entre aplicaciones.', 'avanzado', 35, 2),
+    ('ce-5c', 'ra-5', 'RA5.c', 'Se han aplicado técnicas de cifrado en el almacenamiento y transmisión de información sensible.', 'avanzado', 25, 3)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Work Units
+  INSERT INTO public.work_units (id, module_id, evaluation_id, code, name, hours, taught_percentage, unit_status, weight, ra_ids, sort_order) VALUES
+    ('ut-1', 'module-ruslvg5ye', 'eval-1', 'UT1', 'Gestión de Procesos', 18, 100, 'impartida', 35, ARRAY['ra-1'], 1),
+    ('ut-2', 'module-ruslvg5ye', 'eval-1', 'UT2', 'Programación Multihilo', 22, 100, 'impartida', 65, ARRAY['ra-2'], 2),
+    ('ut-3', 'module-ruslvg5ye', 'eval-2', 'UT3', 'Comunicación en Red con Sockets', 24, 75, 'en_curso', 40, ARRAY['ra-3'], 3),
+    ('ut-4', 'module-ruslvg5ye', 'eval-2', 'UT4', 'Servicios Web REST', 20, 30, 'pendiente', 40, ARRAY['ra-4'], 4),
+    ('ut-5', 'module-ruslvg5ye', 'eval-2', 'UT5', 'Seguridad en Aplicaciones', 12, 0, 'pendiente', 20, ARRAY['ra-5'], 5)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Activities
+  INSERT INTO public.activities (id, module_id, unit_id, evaluation_id, name, activity_type, activity_status, weight, due_date, description, ce_ids, correction_count, reviewed_count) VALUES
+    ('act-1', 'module-ruslvg5ye', 'ut-1', 'eval-1', 'Práctica 1: Fork y exec()', 'práctica', 'cerrada', 30, '2025-10-15', 'Implementar un programa que crea procesos hijo usando fork() y exec().', ARRAY['ce-1a','ce-1b','ce-1c'], 22, 22),
+    ('act-2', 'module-ruslvg5ye', 'ut-1', 'eval-1', 'Práctica 2: Comunicación IPC', 'práctica', 'cerrada', 40, '2025-11-01', 'Usar pipes y memoria compartida para comunicar procesos.', ARRAY['ce-1d','ce-1e'], 22, 22),
+    ('act-3', 'module-ruslvg5ye', 'ut-1', 'eval-1', 'Examen UT1: Procesos', 'examen', 'cerrada', 30, '2025-11-15', 'Examen teórico-práctico sobre gestión de procesos.', ARRAY['ce-1a','ce-1b','ce-1c','ce-1d','ce-1e'], 22, 22),
+    ('act-4', 'module-ruslvg5ye', 'ut-2', 'eval-1', 'Práctica 3: Hilos con ExecutorService', 'práctica', 'revisada_docente', 35, '2025-11-30', 'Crear un pool de hilos para procesar tareas concurrentes.', ARRAY['ce-2a','ce-2b','ce-2c'], 22, 18),
+    ('act-5', 'module-ruslvg5ye', 'ut-2', 'eval-1', 'Práctica 4: Sincronización y locks', 'práctica', 'pendiente_revision', 35, '2025-12-10', 'Implementar soluciones al problema del productor-consumidor.', ARRAY['ce-2d','ce-2e'], 22, 10),
+    ('act-6', 'module-ruslvg5ye', 'ut-2', 'eval-1', 'Examen UT2: Multihilo', 'examen', 'en_correccion', 30, '2025-12-18', 'Examen teórico-práctico sobre programación multihilo.', ARRAY['ce-2a','ce-2b','ce-2c','ce-2d','ce-2e'], 15, 0),
+    ('act-7', 'module-ruslvg5ye', 'ut-3', 'eval-2', 'Práctica 5: Socket TCP cliente/servidor', 'práctica', 'en_correccion', 40, '2026-02-20', 'Desarrollar una aplicación chat usando sockets TCP.', ARRAY['ce-3a','ce-3b','ce-3c'], 14, 5),
+    ('act-8', 'module-ruslvg5ye', 'ut-3', 'eval-2', 'Práctica 6: Socket UDP y multihilo', 'práctica', 'borrador', 35, '2026-03-10', 'Implementar transferencia de archivos con sockets UDP.', ARRAY['ce-3d','ce-3e'], 0, 0),
+    ('act-9', 'module-ruslvg5ye', 'ut-4', 'eval-2', 'Práctica 7: API REST con Spring Boot', 'práctica', 'borrador', 50, '2026-04-05', 'Crear una API REST con autenticación JWT.', ARRAY['ce-4a','ce-4b','ce-4c','ce-4d'], 0, 0),
+    ('act-10', 'module-ruslvg5ye', 'ut-5', 'eval-2', 'Práctica 8: Seguridad TLS y cifrado', 'práctica', 'borrador', 60, '2026-05-10', 'Implementar comunicación segura con TLS y cifrado AES.', ARRAY['ce-5a','ce-5b','ce-5c'], 0, 0)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Students
+  INSERT INTO public.students (id, module_id, nia, name, avatar, email, github_url, module_grade, eval1_grade, eval2_grade, risk_level, ce_superado, ce_parcial, ce_no_superado, ce_no_evaluado, incidents, absences) VALUES
+    ('stu-1', 'module-ruslvg5ye', '22DAM001', 'Alejandro Martínez García', 'AM', 'alejandro.martinez@edu.es', 'https://github.com/alejandro-martinez-psp', 7.85, 8.20, 7.40, 'none', 18, 4, 0, 24, 0, 2),
+    ('stu-2', 'module-ruslvg5ye', '22DAM002', 'Sara Rodríguez López', 'SR', 'sara.rodriguez@edu.es', 'https://github.com/sara-rodriguez-dam', 9.10, 9.30, 8.80, 'none', 22, 0, 0, 24, 0, 0),
+    ('stu-3', 'module-ruslvg5ye', '22DAM003', 'Carlos Fernández Ruiz', 'CF', 'carlos.fernandez@edu.es', NULL, 4.30, 4.80, 3.60, 'high', 5, 6, 11, 24, 3, 8),
+    ('stu-4', 'module-ruslvg5ye', '22DAM004', 'María González Pérez', 'MG', 'maria.gonzalez@edu.es', 'https://github.com/mgonzalez-psp2025', 6.45, 7.10, 5.60, 'low', 14, 5, 3, 24, 1, 3),
+    ('stu-5', 'module-ruslvg5ye', '22DAM005', 'David Sánchez Torres', 'DS', 'david.sanchez@edu.es', NULL, 3.90, 4.20, 3.50, 'high', 3, 4, 15, 24, 5, 12),
+    ('stu-6', 'module-ruslvg5ye', '22DAM006', 'Laura Jiménez Castro', 'LJ', 'laura.jimenez@edu.es', 'https://github.com/laura-jimenez-dev', 8.60, 8.90, 8.20, 'none', 20, 2, 0, 24, 0, 1),
+    ('stu-7', 'module-ruslvg5ye', '22DAM007', 'Pablo Moreno Díaz', 'PM', 'pablo.moreno@edu.es', NULL, 5.70, 6.10, 5.20, 'low', 11, 6, 5, 24, 1, 4),
+    ('stu-8', 'module-ruslvg5ye', '22DAM008', 'Ana Romero Vega', 'AR', 'ana.romero@edu.es', 'https://github.com/ana-romero-psp', 7.20, 7.50, 6.80, 'none', 16, 4, 2, 24, 0, 2),
+    ('stu-9', 'module-ruslvg5ye', '22DAM009', 'Jorge Álvarez Núñez', 'JA', 'jorge.alvarez@edu.es', NULL, 4.80, 5.10, 4.40, 'medium', 8, 5, 9, 24, 2, 6),
+    ('stu-10', 'module-ruslvg5ye', '22DAM010', 'Elena Domínguez Gil', 'ED', 'elena.dominguez@edu.es', 'https://github.com/elena-dominguez-dam2', 8.95, 9.10, 8.70, 'none', 21, 1, 0, 24, 0, 0),
+    ('stu-11', 'module-ruslvg5ye', '22DAM011', 'Miguel Herrera Blanco', 'MH', 'miguel.herrera@edu.es', NULL, 6.10, 6.40, 5.70, 'low', 12, 5, 5, 24, 1, 3),
+    ('stu-12', 'module-ruslvg5ye', '22DAM012', 'Cristina Muñoz Serrano', 'CM', 'cristina.munoz@edu.es', 'https://github.com/cristina-munoz-psp', 7.55, 7.80, 7.20, 'none', 17, 3, 2, 24, 0, 1),
+    ('stu-13', 'module-ruslvg5ye', '22DAM013', 'Andrés Ortega Fuentes', 'AO', 'andres.ortega@edu.es', NULL, 3.40, 3.70, 3.00, 'high', 2, 3, 17, 24, 4, 15),
+    ('stu-14', 'module-ruslvg5ye', '22DAM014', 'Natalia Vargas Pinto', 'NV', 'natalia.vargas@edu.es', 'https://github.com/natalia-vargas-2025', 8.30, 8.60, 7.90, 'none', 19, 3, 0, 24, 0, 2),
+    ('stu-15', 'module-ruslvg5ye', '22DAM015', 'Iván Molina Ríos', 'IM', 'ivan.molina@edu.es', NULL, 5.20, 5.50, 4.80, 'medium', 9, 6, 7, 24, 2, 5),
+    ('stu-16', 'module-ruslvg5ye', '22DAM016', 'Beatriz Reyes Cabrera', 'BR', 'beatriz.reyes@edu.es', 'https://github.com/breyes-psp-dam', 6.85, 7.20, 6.40, 'none', 14, 5, 3, 24, 0, 2),
+    ('stu-17', 'module-ruslvg5ye', '22DAM017', 'Fernando Castillo Mora', 'FC', 'fernando.castillo@edu.es', 'https://github.com/fcastillo-dam2', 7.40, 7.60, 7.10, 'none', 16, 4, 2, 24, 0, 3),
+    ('stu-18', 'module-ruslvg5ye', '22DAM018', 'Silvia Navarro Espejo', 'SN', 'silvia.navarro@edu.es', NULL, 4.60, 5.00, 4.10, 'medium', 7, 5, 10, 24, 2, 7),
+    ('stu-19', 'module-ruslvg5ye', '22DAM019', 'Roberto Iglesias Vidal', 'RI', 'roberto.iglesias@edu.es', 'https://github.com/roberto-iglesias-psp', 9.40, 9.50, 9.20, 'none', 22, 0, 0, 24, 0, 0),
+    ('stu-20', 'module-ruslvg5ye', '22DAM020', 'Verónica Peña Solano', 'VP', 'veronica.pena@edu.es', NULL, 6.20, 6.50, 5.80, 'low', 12, 6, 4, 24, 1, 4),
+    ('stu-21', 'module-ruslvg5ye', '22DAM021', 'Hugo Aguilar Méndez', 'HA', 'hugo.aguilar@edu.es', NULL, 5.90, 6.20, 5.50, 'low', 11, 5, 6, 24, 1, 3),
+    ('stu-22', 'module-ruslvg5ye', '22DAM022', 'Lucía Campos Rubio', 'LC', 'lucia.campos@edu.es', 'https://github.com/lucia-campos-dam2', 7.10, 7.30, 6.80, 'none', 15, 5, 2, 24, 0, 2)
+  ON CONFLICT (id) DO NOTHING;
+
+  -- RA Relationships
+  INSERT INTO public.ra_relationships (id, module_id, ra_source_id, ra_target_id, percentage, description) VALUES
+    ('rel-1', 'module-ruslvg5ye', 'ra-1', 'ra-2', 30, 'Dominar la gestión de procesos facilita la comprensión de hilos de ejecución.'),
+    ('rel-2', 'module-ruslvg5ye', 'ra-2', 'ra-3', 25, 'La programación multihilo es base para la comunicación en red concurrente.'),
+    ('rel-3', 'module-ruslvg5ye', 'ra-3', 'ra-4', 40, 'Los sockets son la base de los servicios en red.')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Incidents
+  INSERT INTO public.incidents (id, student_id, student_name, incident_date, incident_type, detail) VALUES
+    ('inc-1', 'stu-3', 'Carlos Fernández Ruiz', '2026-07-10', 'aviso', 'No entregó la práctica 5 en plazo. Tercera vez que ocurre.'),
+    ('inc-2', 'stu-5', 'David Sánchez Torres', '2026-07-09', 'falta', 'Faltó a clase sin justificación. Acumuladas 12 faltas.'),
+    ('inc-3', 'stu-13', 'Andrés Ortega Fuentes', '2026-07-08', 'aviso', 'No asistió al examen parcial. Pendiente de recuperación.'),
+    ('inc-4', 'stu-9', 'Jorge Álvarez Núñez', '2026-07-07', 'observación', 'Muestra dificultades con la concurrencia. Se recomienda tutoría.'),
+    ('inc-5', 'stu-2', 'Sara Rodríguez López', '2026-07-05', 'positivo', 'Excelente presentación del proyecto de hilos. Propuesta para exposición.'),
+    ('inc-6', 'stu-18', 'Silvia Navarro Espejo', '2026-07-03', 'observación', 'Dificultades con el manejo de excepciones en sockets. Necesita refuerzo.'),
+    ('inc-7', 'stu-15', 'Iván Molina Ríos', '2026-07-01', 'aviso', 'Entrega incompleta de la práctica 5. Falta la parte de sincronización.'),
+    ('inc-8', 'stu-1', 'Alejandro Martínez García', '2026-06-28', 'positivo', 'Ayudó a compañeros con la depuración de hilos. Actitud colaborativa.')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Session Logs
+  INSERT INTO public.session_logs (id, module_id, unit_id, log_date, development, homework, notes) VALUES
+    ('sl-1', 'module-ruslvg5ye', 'ut-3', '2026-07-14', 'Introducción a sockets UDP. Ejercicios de envío/recepción básico.', 'Leer capítulo 8 del manual de redes.', 'Buen ritmo general. Varios alumnos con dudas sobre el modelo cliente-servidor.'),
+    ('sl-2', 'module-ruslvg5ye', 'ut-3', '2026-07-11', 'Práctica guiada: Socket TCP echo server con múltiples clientes.', 'Completar práctica 5 para el lunes.', 'David y Carlos no estuvieron en clase. Ana terminó antes y ayudó a compañeros.'),
+    ('sl-3', 'module-ruslvg5ye', 'ut-3', '2026-07-10', 'Revisión de correcciones Práctica 4. Resolución de errores comunes.', 'Revisar feedback individual en EduTrack.', '8 alumnos pendientes de revisar su feedback. Recordar en próxima sesión.'),
+    ('sl-4', 'module-ruslvg5ye', 'ut-3', '2026-07-07', 'Teoría: Modelo OSI y capa de transporte. Diferencias TCP/UDP.', 'Ejercicios de teoría del libro, pág. 145-150.', 'Clase muy participativa. Sara y Roberto destacaron con preguntas avanzadas.'),
+    ('sl-5', 'module-ruslvg5ye', 'ut-2', '2026-07-04', 'Cierre UT2: Repaso general de concurrencia y patrones de diseño.', 'Preparar examen UT2 para el jueves.', 'Varios alumnos con dudas sobre ReentrantLock vs synchronized.')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Tutoring Actions
+  INSERT INTO public.tutoring_actions (id, student_id, action_date, tutoring_type, content, follow_up) VALUES
+    ('ta-1', 'stu-3', '2026-07-10', 'entrevista', 'Entrevista individual. Carlos reconoce dificultades con la gestión del tiempo. Se acuerda plan de recuperación.', 'Revisión en 2 semanas'),
+    ('ta-2', 'stu-5', '2026-07-09', 'acuerdo', 'Acuerdo de asistencia: David se compromete a asistir a todas las clases restantes. Se notifica a familia.', 'Control semanal de asistencia'),
+    ('ta-3', 'stu-13', '2026-07-08', 'seguimiento', 'Seguimiento de Andrés. Situación familiar complicada. Se deriva a orientación.', 'Coordinación con orientador'),
+    ('ta-4', 'stu-9', '2026-07-05', 'observación', 'Jorge muestra mejora en las últimas semanas. Sigue necesitando apoyo en concurrencia.', 'Tutoría de refuerzo'),
+    ('ta-5', 'stu-15', '2026-06-28', 'entrevista', 'Iván solicita tutoría voluntaria. Quiere mejorar nota final. Se le proporciona material adicional.', 'Entrega de ejercicios extra')
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Calendar Events
+  INSERT INTO public.calendar_events (id, module_id, event_date, title, event_type, notes) VALUES
+    ('ev-1', 'module-ruslvg5ye', '2026-07-14', 'Sesión: Sockets UDP', 'otro', 'Introducción práctica'),
+    ('ev-2', 'module-ruslvg5ye', '2026-07-18', 'Entrega Práctica 6', 'entrega', 'Socket UDP y multihilo'),
+    ('ev-3', 'module-ruslvg5ye', '2026-07-20', 'Examen UT3', 'examen', 'Examen teórico-práctico de sockets'),
+    ('ev-4', 'module-ruslvg5ye', '2026-07-25', 'Tutoría grupal', 'tutoría', 'Revisión de progreso 2ª evaluación'),
+    ('ev-5', 'module-ruslvg5ye', '2026-08-01', 'Inicio UT4: REST', 'otro', 'Servicios Web REST con Spring Boot'),
+    ('ev-6', 'module-ruslvg5ye', '2026-08-15', 'Festivo', 'festivo', NULL),
+    ('ev-7', 'module-ruslvg5ye', '2026-09-05', 'Entrega Práctica 7', 'entrega', 'API REST con autenticación JWT'),
+    ('ev-8', 'module-ruslvg5ye', '2026-09-15', 'Reunión departamento', 'reunión', 'Coordinación evaluación final')
+  ON CONFLICT (id) DO NOTHING;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE NOTICE 'Seed data error: %', SQLERRM;
+END $$;
