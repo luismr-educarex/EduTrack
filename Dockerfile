@@ -1,7 +1,9 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# npm 10 rejects this Rocket-generated lockfile because of an optional PostCSS
+# peer entry; npm install resolves the same pinned top-level dependencies safely.
+RUN npm install --no-audit --no-fund
 
 FROM node:22-alpine AS builder
 WORKDIR /app
