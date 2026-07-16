@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import {
   LayoutDashboard, BookOpen, ClipboardList, Zap, Users, FileText,
-  ChevronLeft, ChevronRight, Settings, LogOut, Bell, BookMarked, CalendarCheck, Upload, GitBranch, Map, Share2, ChevronDown, Activity, School
+  ChevronLeft, ChevronRight, Settings, LogOut, Bell, BookMarked, CalendarCheck,
+  Upload, GitBranch, Map, Share2, ChevronDown, Activity, BookOpenText,
+  CalendarDays, GanttChartSquare, Armchair, Bot, GraduationCap
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 
@@ -38,7 +40,13 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'nav-reports', label: 'Informes', href: '/reports', icon: <FileText size={18} /> },
   { key: 'nav-daily', label: 'Herramientas del Día', href: '/daily-tools', icon: <CalendarCheck size={18} /> },
   { key: 'nav-import', label: 'Importar Datos', href: '/import-data', icon: <Upload size={18} /> },
-  { key: 'nav-aulatrack', label: 'AulaTrack', href: '/aulatrack', icon: <School size={18} /> },
+  { key: 'nav-contents', label: 'Contenidos', href: '/contents', icon: <BookOpenText size={18} /> },
+  { key: 'nav-calendar', label: 'Calendario', href: '/module-calendar', icon: <CalendarDays size={18} /> },
+  { key: 'nav-gantt', label: 'Vista Gantt', href: '/gantt-view', icon: <GanttChartSquare size={18} /> },
+  { key: 'nav-seating', label: 'Distribución de puestos', href: '/seating', icon: <Armchair size={18} /> },
+  { key: 'nav-corrections', label: 'Corrección asistida', href: '/corrections', icon: <Bot size={18} /> },
+  { key: 'nav-grade-import', label: 'Importar calificaciones', href: '/grade-import', icon: <Upload size={18} /> },
+  { key: 'nav-course-management', label: 'Gestión académica', href: '/course-management', icon: <GraduationCap size={18} /> },
 ];
 
 export default function Sidebar() {
@@ -241,7 +249,7 @@ export default function Sidebar() {
               <span>Notificaciones</span>
             </Link>
           )}
-          <Link href="/aulatrack?tab=settings" className={`flex items-center gap-3 px-2 py-2 rounded-md text-secondary-foreground hover:bg-muted hover:text-foreground transition-colors text-sm ${collapsed ? 'justify-center' : ''}`}>
+          <Link href="/course-management" className={`flex items-center gap-3 px-2 py-2 rounded-md text-secondary-foreground hover:bg-muted hover:text-foreground transition-colors text-sm ${collapsed ? 'justify-center' : ''}`}>
             <Settings size={18} className="text-muted-foreground flex-shrink-0" />
             {!collapsed && <span>Configuración</span>}
           </Link>
