@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
+import RepositoryPicker from '@/components/github/RepositoryPicker';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import {
   CalendarEvent, calendarEventService, gradeService, moduleService,
@@ -11,8 +12,10 @@ import { getChatCompletion } from '@/lib/ai/chatCompletion';
 import { toast } from 'sonner';
 import {
   Armchair, Bot, CalendarDays, ChevronLeft, ChevronRight, Download,
-  Filter, Plus, Save, Search, Trash2, Upload, Users,
+  ExternalLink, FileCode2, Filter, FolderGit2 as Github, Plus, Save, Search, Trash2, Upload, Users,
 } from 'lucide-react';
+import type { GitHubFilesResponse } from '@/lib/github/types';
+import { isGitHubRepositoryUrl } from '@/lib/github/url';
 
 type ContentItem = {
   id: string;
@@ -319,18 +322,54 @@ export function CorrectionsFeature() {
   const { activities, students, criteria, grades, refreshGrades } = useEduTrack();
   const [activityId, setActivityId] = useState('');
   const [studentId, setStudentId] = useState('');
+  const [mode, setMode] = useState<'automatic' | 'manual'>('automatic');
   const [submission, setSubmission] = useState('');
   const [result, setResult] = useState<{ grade: number; feedback: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [repositoryLoading, setRepositoryLoading] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [pendingPaths, setPendingPaths] = useState<string[]>([]);
+  const autoLoadedKey = useRef('');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedActivity = params.get('activity');
     const requestedStudent = params.get('student');
+    const requestedPaths = params.get('repoPaths');
     if (requestedActivity) setActivityId(requestedActivity);
     if (requestedStudent) setStudentId(requestedStudent);
+    if (requestedPaths) { try { const parsed = JSON.parse(requestedPaths); if (Array.isArray(parsed)) setPendingPaths(parsed.map(String)); } catch { /* Ignore malformed external query. */ } }
   }, []);
   const selectedActivity = activities.find(activity => activity.id === activityId);
+  const selectedStudentRecord = students.find(student => student.id === studentId);
+  const selectedStudentHasRepository = isGitHubRepositoryUrl(selectedStudentRecord?.githubUrl);
+  const selectedStudent = selectedStudentHasRepository ? selectedStudentRecord : selectedStudentRecord ? { ...selectedStudentRecord, githubUrl: undefined } : undefined;
   const existingGrade = grades.find(grade => grade.activityId === activityId && grade.studentId === studentId)?.grade;
+
+  const loadRepositoryFiles = async (paths: string[]) => {
+    if (!selectedStudent?.githubUrl || !selectedStudentHasRepository) { toast.error('El alumno no tiene un repositorio válido asociado'); return; }
+    setRepositoryLoading(true);
+    try {
+      const response = await fetch('/api/github/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repositoryUrl: selectedStudent.githubUrl, paths }) });
+      const body = await response.json() as GitHubFilesResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error || 'No se pudo cargar la selección.');
+      setSelectedPaths(paths);
+      setSubmission(body.files.map(file => `===== ${file.path} =====\n${file.content}`).join('\n\n'));
+      setPickerOpen(false);
+      toast.success(`${body.files.length} fichero${body.files.length === 1 ? '' : 's'} cargado${body.files.length === 1 ? '' : 's'} desde GitHub`);
+      if (body.skipped.length) toast.warning(`${body.skipped.length} elemento(s) omitidos por tipo o tamaño`);
+    } catch (caught) { toast.error(caught instanceof Error ? caught.message : 'No se pudo cargar GitHub'); }
+    finally { setRepositoryLoading(false); }
+  };
+
+  useEffect(() => {
+    if (!pendingPaths.length || !selectedStudent?.githubUrl || !selectedStudentHasRepository) return;
+    const key = `${selectedStudent.id}:${pendingPaths.join('|')}`;
+    if (autoLoadedKey.current === key) return;
+    autoLoadedKey.current = key;
+    void loadRepositoryFiles(pendingPaths).finally(() => setPendingPaths([]));
+  }, [pendingPaths, selectedStudent]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const correct = async () => {
     if (!selectedActivity || !studentId || !submission.trim()) return toast.error('Completa actividad, alumno y entrega');
     setLoading(true); setResult(null);
@@ -345,13 +384,18 @@ export function CorrectionsFeature() {
       toast.error(error instanceof Error ? error.message : 'No se pudo completar la corrección');
     } finally { setLoading(false); }
   };
-  const save = async () => { if (!result) return; await gradeService.upsertGrade(studentId, activityId, result.grade); await refreshGrades(); toast.success('Calificación guardada'); };
-  return <div className="grid xl:grid-cols-[1fr_320px] gap-6"><Panel title="Corrección asistida" description="La IA propone una nota a partir de los criterios reales; el docente siempre la revisa antes de guardarla.">
+  const save = async () => { if (!result || !studentId || !activityId) return toast.error('Completa alumno, actividad, nota y comentario'); await gradeService.upsertGrade(studentId, activityId, result.grade); await refreshGrades(); toast.success(mode === 'manual' ? 'Corrección manual guardada' : 'Calificación revisada guardada'); };
+  return <><div className="grid xl:grid-cols-[1fr_320px] gap-6"><Panel title="Corrección de entregas" description="Selecciona código del repositorio del alumno o pega una entrega, y corrige con IA o manualmente.">
+    <div className="mb-4 inline-flex rounded-lg border border-border bg-muted/30 p-1"><button onClick={() => setMode('automatic')} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${mode === 'automatic' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}><Bot size={13} className="mr-1 inline" />Automática con IA</button><button onClick={() => { setMode('manual'); setResult(current => current || { grade: existingGrade ?? 0, feedback: '' }); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${mode === 'manual' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}><FileCode2 size={13} className="mr-1 inline" />Manual</button></div>
     <div className="grid md:grid-cols-2 gap-3 mb-3"><select className={inputClass} value={activityId} onChange={e => setActivityId(e.target.value)}><option value="">Actividad…</option>{activities.map(activity => <option key={activity.id} value={activity.id}>{activity.name}</option>)}</select><select className={inputClass} value={studentId} onChange={e => setStudentId(e.target.value)}><option value="">Alumno…</option>{students.map(student => <option key={student.id} value={student.id}>{student.name}</option>)}</select></div>
+    {selectedStudent && <div className="mb-3 rounded-xl border border-border bg-muted/20 p-3"><div className="flex flex-wrap items-center gap-3"><div className="rounded-lg bg-foreground p-2 text-background"><Github size={17} /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold">Repositorio de {selectedStudent.name}</p>{selectedStudent.githubUrl ? <a href={selectedStudent.githubUrl} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 truncate text-[11px] text-primary hover:underline">{selectedStudent.githubUrl.replace(/^https:\/\/github\.com\//, '')}<ExternalLink size={10} /></a> : <p className="text-[11px] text-warning">Repositorio no configurado</p>}</div>{selectedStudent.githubUrl ? <button disabled={repositoryLoading} onClick={() => setPickerOpen(true)} className="rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">{repositoryLoading ? 'Cargando…' : 'Seleccionar carpetas o ficheros'}</button> : <Link href={`/repositories?student=${selectedStudent.id}`} className="rounded-lg border border-primary px-3 py-2 text-xs font-semibold text-primary">Configurar repositorio</Link>}</div>{selectedPaths.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{selectedPaths.map(path => <span key={path} className="rounded bg-primary/10 px-2 py-1 font-mono text-[10px] text-primary">{path}</span>)}<button onClick={() => { setSelectedPaths([]); setSubmission(''); }} className="px-2 py-1 text-[10px] font-semibold text-danger">Limpiar</button></div>}</div>}
     {existingGrade !== undefined && <p className="mb-3 text-xs text-muted-foreground">Calificación actual: <strong>{existingGrade ?? 'Sin calificar'}</strong></p>}
-    <textarea className={inputClass} rows={12} placeholder="Pega aquí la entrega del alumno…" value={submission} onChange={e => setSubmission(e.target.value)} /><button className={`${primaryButton} mt-3`} disabled={loading} onClick={correct}><Bot size={16} />{loading ? 'Corrigiendo…' : 'Corregir con IA'}</button>
-    {result && <div className="mt-5 border border-primary/30 bg-primary/5 rounded-lg p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">Propuesta revisable</p><label className="flex items-center gap-2 text-sm">Nota <input type="number" min="0" max="10" step="0.1" className="w-20 border rounded px-2 py-1" value={result.grade} onChange={e => setResult({ ...result, grade: Number(e.target.value) })} /></label></div><textarea className={`${inputClass} mt-3`} rows={6} value={result.feedback} onChange={e => setResult({ ...result, feedback: e.target.value })} /><button className={`${primaryButton} mt-4`} onClick={save}><Save size={16} />Guardar nota revisada</button></div>}
-  </Panel><Panel title="Criterios aplicados" description="Criterios asociados a la actividad seleccionada."><div className="space-y-3">{selectedActivity ? criteria.filter(criterion => selectedActivity.ceIds.includes(criterion.id)).map(criterion => <div key={criterion.id} className="border border-border rounded-lg p-3"><div className="flex justify-between"><strong className="text-xs text-primary">{criterion.code}</strong><span className="text-xs">{criterion.weight}%</span></div><p className="text-xs text-muted-foreground mt-1">{criterion.description}</p></div>) : <p className="text-sm text-muted-foreground">Selecciona una actividad.</p>}</div></Panel></div>;
+    <textarea className={inputClass} rows={14} placeholder="Selecciona ficheros de GitHub o pega aquí la entrega del alumno…" value={submission} onChange={e => { setSubmission(e.target.value); if (selectedPaths.length) setSelectedPaths([]); }} />
+    {mode === 'automatic' && <button className={`${primaryButton} mt-3`} disabled={loading || repositoryLoading} onClick={correct}><Bot size={16} />{loading ? 'Corrigiendo…' : 'Corregir con IA'}</button>}
+    {mode === 'manual' && <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-4"><div className="flex flex-wrap items-center justify-between gap-3"><p className="font-semibold">Valoración manual</p><label className="flex items-center gap-2 text-sm">Nota <input type="number" min="0" max="10" step="0.1" className="w-20 rounded border bg-background px-2 py-1" value={result?.grade ?? 0} onChange={e => setResult({ grade: Math.min(10, Math.max(0, Number(e.target.value))), feedback: result?.feedback || '' })} /></label></div><textarea className={`${inputClass} mt-3`} rows={6} placeholder="Comentario y aspectos que debe mejorar…" value={result?.feedback || ''} onChange={e => setResult({ grade: result?.grade ?? 0, feedback: e.target.value })} /><button className={`${primaryButton} mt-4`} onClick={save}><Save size={16} />Guardar corrección manual</button></div>}
+    {mode === 'automatic' && result && <div className="mt-5 border border-primary/30 bg-primary/5 rounded-lg p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold">Propuesta revisable</p><label className="flex items-center gap-2 text-sm">Nota <input type="number" min="0" max="10" step="0.1" className="w-20 border rounded px-2 py-1" value={result.grade} onChange={e => setResult({ ...result, grade: Number(e.target.value) })} /></label></div><textarea className={`${inputClass} mt-3`} rows={6} value={result.feedback} onChange={e => setResult({ ...result, feedback: e.target.value })} /><button className={`${primaryButton} mt-4`} onClick={save}><Save size={16} />Guardar nota revisada</button></div>}
+  </Panel><Panel title="Criterios aplicados" description="Criterios asociados a la actividad seleccionada."><div className="space-y-3">{selectedActivity ? criteria.filter(criterion => selectedActivity.ceIds.includes(criterion.id)).map(criterion => <div key={criterion.id} className="border border-border rounded-lg p-3"><div className="flex justify-between"><strong className="text-xs text-primary">{criterion.code}</strong><span className="text-xs">{criterion.weight}%</span></div><p className="text-xs text-muted-foreground mt-1">{criterion.description}</p></div>) : <p className="text-sm text-muted-foreground">Selecciona una actividad.</p>}</div></Panel></div>
+  {pickerOpen && selectedStudent?.githubUrl && <RepositoryPicker repositoryUrl={selectedStudent.githubUrl} studentName={selectedStudent.name} initialSelection={selectedPaths} onClose={() => setPickerOpen(false)} onSelect={loadRepositoryFiles} />}</>;
 }
 
 export function GradeImportFeature() {

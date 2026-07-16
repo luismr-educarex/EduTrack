@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, ClipboardList, Zap, Users, FileText,
   ChevronLeft, ChevronRight, Settings, LogOut, Bell, BookMarked, CalendarCheck,
   Upload, GitBranch, Map, Share2, ChevronDown, Activity, BookOpenText,
-  CalendarDays, GanttChartSquare, Armchair, Bot, GraduationCap
+  CalendarDays, GanttChartSquare, Armchair, Bot, GraduationCap, FolderGit2 as Github
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 
@@ -37,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'nav-grading', label: 'Calificaciones', href: '/grading', icon: <ClipboardList size={18} /> },
   { key: 'nav-activities', label: 'Actividades', href: '/activities', icon: <Zap size={18} />, badge: 3 },
   { key: 'nav-students', label: 'Alumnado y Tutoría', href: '/students-tutoring', icon: <Users size={18} />, badge: 5 },
+  { key: 'nav-repositories', label: 'Repositorios', href: '/repositories', icon: <Github size={18} /> },
   { key: 'nav-reports', label: 'Informes', href: '/reports', icon: <FileText size={18} /> },
   { key: 'nav-daily', label: 'Herramientas del Día', href: '/daily-tools', icon: <CalendarCheck size={18} /> },
   { key: 'nav-import', label: 'Importar Datos', href: '/import-data', icon: <Upload size={18} /> },

@@ -8,7 +8,7 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import StudentTimeline from './StudentTimeline';
 import { getGradeLabel, getGradeColor, getRiskBadge, getRiskLabel, getCEGrade, getCEStatus, getCEStatusColor, getCEStatusLabel, getRAGrade, getIncidentTypeColor, getIncidentTypeLabel, getDifficultyPoints } from '@/lib/mockData';
 import { useEduTrack } from '@/contexts/EduTrackContext';
-import { incidentService } from '@/lib/services/edutrackService';
+import { incidentService, studentService } from '@/lib/services/edutrackService';
 import type { Student, Incident, TutoringAction } from '@/lib/services/edutrackService';
 
 type ProfileTab = 'rendimiento' | 'seguimiento' | 'tutoría' | 'asistencia';
@@ -116,17 +116,24 @@ export default function StudentsTutoringContent() {
     toast.success('Acción tutorial registrada');
   };
 
-  const handleSaveGithub = () => {
+  const handleSaveGithub = async () => {
     if (!selectedStudent) return;
     const url = githubInput.trim();
-    if (url && !url.startsWith('https://')) {
-      toast.error('La URL debe comenzar con https://');
+    if (url && !/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?\/?$/i.test(url)) {
+      toast.error('Usa https://github.com/usuario/repositorio');
       return;
     }
-    setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, githubUrl: url || undefined } : s));
-    setSelectedStudent(prev => prev ? { ...prev, githubUrl: url || undefined } : prev);
-    setEditingGithub(false);
-    toast.success('Repositorio GitHub actualizado');
+    try {
+      const updated = { ...selectedStudent, githubUrl: url || undefined };
+      await studentService.upsert(updated);
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? updated : s));
+      setSelectedStudent(updated);
+      await refreshStudents();
+      setEditingGithub(false);
+      toast.success('Repositorio GitHub actualizado');
+    } catch {
+      toast.error('No se pudo guardar el repositorio');
+    }
   };
 
   const profileTabs: { key: ProfileTab; label: string }[] = [
