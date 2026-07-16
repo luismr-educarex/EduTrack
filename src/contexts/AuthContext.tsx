@@ -4,8 +4,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '../lib/supabase/client';
 
-type SignUpMetadata = { fullName?: string; avatarUrl?: string };
-
 const AuthContext = createContext<any>({});
 
 export const useAuth = () => {
@@ -42,33 +40,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Email/Password Sign Up
-  const signUp = async (email: string, password: string, metadata: SignUpMetadata = {}) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: metadata?.fullName || '',
-          avatar_url: metadata?.avatarUrl || ''
-        },
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-      }
-    });
-    if (error) throw error;
-    return data;
-  };
-
-  // Email/Password Sign In
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) throw error;
-    return data;
-  };
-
   // Sign Out
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -103,8 +74,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     session,
     loading,
-    signUp,
-    signIn,
     signOut,
     getCurrentUser,
     isEmailVerified,
