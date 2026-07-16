@@ -1,4 +1,15 @@
-// Backend integration point: replace all mock data with /api/bootstrap response
+// Demo fixtures. Runtime calculations are bound to Supabase data by EduTrackContext.
+import {
+  activityCriterionWeight as domainActivityCriterionWeight,
+  activityGrade as domainActivityGrade,
+  activityValuePercentage as domainActivityValuePercentage,
+  criterionGrade as domainCriterionGrade,
+  criterionStatus as domainCriterionStatus,
+  evaluationGrade as domainEvaluationGrade,
+  outcomeGrade as domainOutcomeGrade,
+  unitGrade as domainUnitGrade,
+  weightedAverage as domainWeightedAverage,
+} from './domain/calculations';
 
 export const ACTIVE_MODULE = {
   id: 'module-ruslvg5ye',
@@ -267,9 +278,24 @@ export const STUDENTS: Student[] = [
   { id: 'stu-22', nia: '22DAM022', name: 'Lucía Campos Rubio', avatar: 'LC', email: 'lucia.campos@edu.es', githubUrl: 'https://github.com/lucia-campos-dam2', moduleGrade: 7.10, eval1Grade: 7.30, eval2Grade: 6.80, riskLevel: 'none', ceSuperado: 15, ceParcial: 5, ceNoSuperado: 2, ceNoEvaluado: 24, incidents: 0, absences: 2 },
 ];
 
+type RuntimeAcademicData = {
+  activities: Activity[];
+  criteria: Criterion[];
+  grades: { studentId: string; activityId: string; grade: number | null }[];
+  evaluations: { id: string; name: string; weight: number }[];
+  workUnits: { id: string; code: string; name: string; evaluationId: string }[];
+};
+
+let runtimeAcademicData: RuntimeAcademicData | null = null;
+
+export function configureAcademicCalculations(data: RuntimeAcademicData) {
+  runtimeAcademicData = data;
+}
+
 // ─── GRADES MATRIX ────────────────────────────────────────────────────────────
 // Deterministic grade per student × activity (simulated)
 export function getActivityGrade(studentId: string, activityId: string): number | null {
+  if (runtimeAcademicData) return domainActivityGrade(studentId, activityId, runtimeAcademicData.grades);
   const sIdx = STUDENTS.findIndex(s => s.id === studentId);
   const aIdx = ACTIVITIES.findIndex(a => a.id === activityId);
   const act = ACTIVITIES[aIdx];
@@ -284,6 +310,7 @@ export function getActivityGrade(studentId: string, activityId: string): number 
 
 // Grade per CE for a student (weighted average across activities that evaluate that CE)
 export function getCEGrade(studentId: string, ceId: string): number | null {
+  if (runtimeAcademicData) return domainCriterionGrade(studentId, ceId, runtimeAcademicData.activities, runtimeAcademicData.criteria, runtimeAcademicData.grades);
   const activitiesWithCE = ACTIVITIES.filter(a => a.ceIds.includes(ceId));
   const grades: number[] = [];
   for (const act of activitiesWithCE) {
@@ -296,14 +323,12 @@ export function getCEGrade(studentId: string, ceId: string): number | null {
 
 // CE status from grade
 export function getCEStatus(grade: number | null): 'superado' | 'parcial' | 'no_superado' | 'no_evaluado' {
-  if (grade === null) return 'no_evaluado';
-  if (grade >= 7) return 'superado';
-  if (grade >= 5) return 'parcial';
-  return 'no_superado';
+  return domainCriterionStatus(grade);
 }
 
 // RA grade for a student (weighted avg of CE grades by difficulty points)
 export function getRAGrade(studentId: string, raId: string): number | null {
+  if (runtimeAcademicData) return domainOutcomeGrade(studentId, raId, runtimeAcademicData.activities, runtimeAcademicData.criteria, runtimeAcademicData.grades);
   const ces = CRITERIA.filter(c => c.raId === raId);
   let totalWeight = 0;
   let weightedSum = 0;
@@ -326,12 +351,11 @@ export function getRAGrade(studentId: string, raId: string): number | null {
  * básico=1pt, medio=2pt, avanzado=3pt. This is the "peso" of the activity.
  */
 export function getActivityCEWeight(activityId: string): number {
-  const act = ACTIVITIES.find(a => a.id === activityId);
+  const activities = runtimeAcademicData?.activities ?? ACTIVITIES;
+  const criteria = runtimeAcademicData?.criteria ?? CRITERIA;
+  const act = activities.find(a => a.id === activityId);
   if (!act || act.ceIds.length === 0) return 0;
-  return act.ceIds.reduce((sum, ceId) => {
-    const ce = CRITERIA.find(c => c.id === ceId);
-    return sum + (ce ? getDifficultyPoints(ce.difficulty) : 0);
-  }, 0);
+  return domainActivityCriterionWeight(act, criteria);
 }
 
 /**
@@ -340,15 +364,7 @@ export function getActivityCEWeight(activityId: string): number {
  * % = activityCEWeight / sum(CEWeights of all activities in same container) * 100
  */
 export function getActivityValuePct(activityId: string): number {
-  const act = ACTIVITIES.find(a => a.id === activityId);
-  if (!act) return 0;
-  const containerId = act.unitId ?? act.evaluationId;
-  const siblings = ACTIVITIES.filter(a =>
-    act.unitId ? a.unitId === act.unitId : (!a.unitId && a.evaluationId === act.evaluationId)
-  );
-  let totalWeight = siblings.reduce((sum, a) => sum + getActivityCEWeight(a.id), 0);
-  if (totalWeight === 0) return 0;
-  return parseFloat(((getActivityCEWeight(activityId) / totalWeight) * 100).toFixed(1));
+  return domainActivityValuePercentage(activityId, runtimeAcademicData?.activities ?? ACTIVITIES, runtimeAcademicData?.criteria ?? CRITERIA);
 }
 
 /**
@@ -367,6 +383,7 @@ export function getActivityWeightedGrade(studentId: string, activityId: string):
  * based on activity CE weights.
  */
 export function getUTWeightedGrade(studentId: string, unitId: string): number | null {
+  if (runtimeAcademicData) return domainUnitGrade(studentId, unitId, runtimeAcademicData.activities, runtimeAcademicData.criteria, runtimeAcademicData.grades);
   const acts = ACTIVITIES.filter(a => a.unitId === unitId);
   if (acts.length === 0) return null;
   const totalCEWeight = acts.reduce((sum, a) => sum + getActivityCEWeight(a.id), 0);
@@ -390,6 +407,7 @@ export function getUTWeightedGrade(studentId: string, unitId: string): number | 
  * considering both UT-based and direct activities.
  */
 export function getEvalWeightedGrade(studentId: string, evalId: string): number | null {
+  if (runtimeAcademicData) return domainEvaluationGrade(studentId, evalId, runtimeAcademicData.activities, runtimeAcademicData.criteria, runtimeAcademicData.grades);
   const acts = ACTIVITIES.filter(a => a.evaluationId === evalId);
   if (acts.length === 0) return null;
   const totalCEWeight = acts.reduce((sum, a) => sum + getActivityCEWeight(a.id), 0);
@@ -431,6 +449,7 @@ export interface UTGradeEntry {
 export interface EvalGradeEntry {
   evaluationId: string;
   evaluationName: string;
+  weight: number;
   grade: number | null;
   units: UTGradeEntry[];
   directActivities: ActivityGradeEntry[];
@@ -443,9 +462,12 @@ export interface StudentGradeMap {
 }
 
 export function buildStudentGradeMap(studentId: string): StudentGradeMap {
-  const evaluations: EvalGradeEntry[] = EVALUATIONS.map(ev => {
-    const units: UTGradeEntry[] = WORK_UNITS.filter(ut => ut.evaluationId === ev.id).map(ut => {
-      const acts = ACTIVITIES.filter(a => a.unitId === ut.id);
+  const sourceEvaluations = runtimeAcademicData?.evaluations ?? EVALUATIONS;
+  const sourceWorkUnits = runtimeAcademicData?.workUnits ?? WORK_UNITS;
+  const sourceActivities = runtimeAcademicData?.activities ?? ACTIVITIES;
+  const evaluations: EvalGradeEntry[] = sourceEvaluations.map(ev => {
+    const units: UTGradeEntry[] = sourceWorkUnits.filter(ut => ut.evaluationId === ev.id).map(ut => {
+      const acts = sourceActivities.filter(a => a.unitId === ut.id);
       const activities: ActivityGradeEntry[] = acts.map(act => ({
         activityId: act.id,
         activityName: act.name,
@@ -466,7 +488,7 @@ export function buildStudentGradeMap(studentId: string): StudentGradeMap {
       };
     });
 
-    const directActs = ACTIVITIES.filter(a => a.evaluationId === ev.id && !a.unitId);
+    const directActs = sourceActivities.filter(a => a.evaluationId === ev.id && !a.unitId);
     const directActivities: ActivityGradeEntry[] = directActs.map(act => ({
       activityId: act.id,
       activityName: act.name,
@@ -481,6 +503,7 @@ export function buildStudentGradeMap(studentId: string): StudentGradeMap {
     return {
       evaluationId: ev.id,
       evaluationName: ev.name,
+      weight: ev.weight,
       grade: getEvalWeightedGrade(studentId, ev.id),
       units,
       directActivities,
@@ -490,7 +513,7 @@ export function buildStudentGradeMap(studentId: string): StudentGradeMap {
   // Module grade: weighted avg of evaluations
   const evalGrades = evaluations.map((e, i) => ({
     value: e.grade,
-    weight: EVALUATIONS[i]?.weight ?? 50,
+    weight: sourceEvaluations[i]?.weight ?? 50,
   }));
   const moduleGrade = weightedAverage(evalGrades);
 
@@ -800,11 +823,7 @@ export function getIncidentTypeLabel(type: string): string {
 
 // Weighted average ignoring nulls
 export function weightedAverage(items: { value: number | null; weight: number }[]): number | null {
-  const valid = items.filter(i => i.value !== null && i.weight > 0) as { value: number; weight: number }[];
-  if (valid.length === 0) return null;
-  const totalW = valid.reduce((s, i) => s + i.weight, 0);
-  if (totalW === 0) return null;
-  return parseFloat((valid.reduce((s, i) => s + i.value * i.weight, 0) / totalW).toFixed(2));
+  return domainWeightedAverage(items);
 }
 
 // Export CSV helper

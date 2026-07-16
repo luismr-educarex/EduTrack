@@ -5,6 +5,7 @@ import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { EduTrackProvider } from '@/contexts/EduTrackContext';
+import AuthGate from '@/components/AuthGate';
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -40,10 +41,12 @@ export default function RootLayout({
     <html lang="es" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className={ibmPlexSans.className}>
         <AuthProvider>
-          <EduTrackProvider>
-            {children}
-            <Toaster position="bottom-right" richColors closeButton />
-          </EduTrackProvider>
+          <AuthGate>
+            <EduTrackProvider>
+              {children}
+              <Toaster position="bottom-right" richColors closeButton />
+            </EduTrackProvider>
+          </AuthGate>
         </AuthProvider>
 </body>
     </html>

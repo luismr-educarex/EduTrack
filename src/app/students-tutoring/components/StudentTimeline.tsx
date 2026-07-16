@@ -2,7 +2,9 @@
 import React, { useState } from 'react';
 import { AlertTriangle, TrendingUp, Target, BookOpen, XCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LEARNING_OUTCOMES, CRITERIA, buildStudentMasteryTimeline, getCEGrade, getCEStatus, getCEStatusColor, getCEStatusLabel, getGradeColor, Student } from '@/lib/mockData';
+import { getCEGrade, getCEStatus, getCEStatusColor, getCEStatusLabel, getGradeColor } from '@/lib/mockData';
+import type { Student } from '@/lib/services/edutrackService';
+import { useEduTrack } from '@/contexts/EduTrackContext';
 
 interface StudentTimelineProps {
   student: Student;
@@ -35,7 +37,22 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 export default function StudentTimeline({ student }: StudentTimelineProps) {
-  const timeline = buildStudentMasteryTimeline(student.id);
+  const { learningOutcomes: LEARNING_OUTCOMES, criteria: CRITERIA, activities, grades } = useEduTrack();
+  const milestones = activities.map(activity => {
+    const grade = grades.find(item => item.studentId === student.id && item.activityId === activity.id)?.grade ?? null;
+    return { type: 'activity' as const, label: activity.name, date: activity.dueDate, grade, status: getCEStatus(grade), ceIds: activity.ceIds };
+  }).filter(milestone => milestone.grade !== null).sort((left, right) => left.date.localeCompare(right.date));
+  const knowledgeGaps = CRITERIA.map(criterion => {
+    const grade = getCEGrade(student.id, criterion.id);
+    return { ceId: criterion.id, ceCode: criterion.code, description: criterion.description, grade, status: getCEStatus(grade) };
+  }).filter(gap => gap.status === 'parcial' || gap.status === 'no_superado');
+  const masteredCECount = CRITERIA.filter(criterion => getCEStatus(getCEGrade(student.id, criterion.id)) === 'superado').length;
+  const totalEvaluatedCECount = CRITERIA.filter(criterion => getCEGrade(student.id, criterion.id) !== null).length;
+  const riskAlerts: { severity: 'high' | 'medium' | 'low'; message: string }[] = [];
+  if (student.riskLevel !== 'none') riskAlerts.push({ severity: student.riskLevel, message: `Nivel de riesgo ${student.riskLevel}; conviene revisar su evolución académica.` });
+  if (student.absences >= 5) riskAlerts.push({ severity: student.absences >= 10 ? 'high' : 'medium', message: `${student.absences} faltas registradas.` });
+  if (student.incidents >= 2) riskAlerts.push({ severity: student.incidents >= 4 ? 'high' : 'medium', message: `${student.incidents} incidencias registradas.` });
+  const timeline = { milestones, knowledgeGaps, masteredCECount, totalEvaluatedCECount, riskAlerts, overallProgress: CRITERIA.length ? Math.round(masteredCECount / CRITERIA.length * 100) : 0 };
   const [expandedRA, setExpandedRA] = useState<string[]>([]);
 
   const toggleRA = (raId: string) => {

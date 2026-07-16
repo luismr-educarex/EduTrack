@@ -601,11 +601,11 @@ export default function CurriculumRelationsContent() {
   const { learningOutcomes: dbLO, criteria: dbCriteria, workUnits: dbWU, evaluations: dbEvals, activities: dbActs } = useEduTrack();
 
   // Update module-level references for sub-components
-  if (dbLO.length > 0) LEARNING_OUTCOMES = dbLO;
-  if (dbCriteria.length > 0) CRITERIA = dbCriteria;
-  if (dbWU.length > 0) WORK_UNITS = dbWU;
-  if (dbEvals.length > 0) EVALUATIONS = dbEvals;
-  if (dbActs.length > 0) ACTIVITIES = dbActs;
+  LEARNING_OUTCOMES = dbLO;
+  CRITERIA = dbCriteria;
+  WORK_UNITS = dbWU;
+  EVALUATIONS = dbEvals.map(evaluation => ({ ...evaluation, type: evaluation.evalType }));
+  ACTIVITIES = dbActs;
 
   const [viewMode, setViewMode] = useState<ViewMode>('ra-tree');
   const [search, setSearch] = useState('');

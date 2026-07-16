@@ -145,6 +145,39 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+export interface ContentItem {
+  id: string;
+  moduleId: string;
+  unitId: string;
+  title: string;
+  type: string;
+  description: string;
+  sortOrder: number;
+}
+
+export interface SeatLayout {
+  moduleId: string;
+  rows: number;
+  columns: number;
+  assignments: Record<string, string>;
+}
+
+export interface ClassGroup {
+  id: string;
+  moduleId: string;
+  name: string;
+  tutor: string;
+  room: string;
+}
+
+export interface GradingScale {
+  id: string;
+  moduleId: string;
+  name: string;
+  passingGrade: number;
+  latePenalty: number;
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function isSchemaError(error: any): boolean {
   if (!error) return false;
@@ -158,6 +191,21 @@ function isSchemaError(error: any): boolean {
   }
   return false;
 }
+
+function assertRequest(error: any, operation: string) {
+  if (error) throw new Error(`${operation}: ${error.message || 'error de base de datos'}`);
+}
+
+export const foundationService = {
+  async claimLegacyData(): Promise<number> {
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('claim_legacy_data');
+    // The application can still run before the migration is applied locally.
+    if (error && /claim_legacy_data|schema cache|function/i.test(error.message || '')) return 0;
+    assertRequest(error, 'No se pudieron reclamar los datos existentes');
+    return Number(data || 0);
+  },
+};
 
 // ─── MODULES ──────────────────────────────────────────────────────────────────
 export const moduleService = {
@@ -606,5 +654,120 @@ export const calendarEventService = {
       const { error } = await supabase.from('calendar_events').delete().eq('id', id);
       if (error) { if (isSchemaError(error)) throw error; }
     } catch (e: any) { console.error('calendarEventService.delete:', e.message); throw e; }
+  },
+};
+
+// ─── PERSISTED PHASE 1 CAPABILITIES ──────────────────────────────────────────
+export const contentService = {
+  async getByModule(moduleId: string): Promise<ContentItem[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('contents').select('*').eq('module_id', moduleId).order('sort_order');
+    assertRequest(error, 'No se pudieron cargar los contenidos');
+    return (data || []).map(row => ({
+      id: row.id, moduleId: row.module_id, unitId: row.unit_id, title: row.title,
+      type: row.content_type, description: row.description, sortOrder: row.sort_order,
+    }));
+  },
+
+  async upsert(item: ContentItem): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('contents').upsert({
+      id: item.id, module_id: item.moduleId, unit_id: item.unitId, title: item.title,
+      content_type: item.type, description: item.description, sort_order: item.sortOrder,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    assertRequest(error, 'No se pudo guardar el contenido');
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('contents').delete().eq('id', id);
+    assertRequest(error, 'No se pudo eliminar el contenido');
+  },
+};
+
+export const seatLayoutService = {
+  async get(moduleId: string): Promise<SeatLayout> {
+    const supabase = createClient();
+    const [{ data: layout, error: layoutError }, { data: assignments, error: assignmentError }] = await Promise.all([
+      supabase.from('seat_layouts').select('*').eq('module_id', moduleId).maybeSingle(),
+      supabase.from('seat_assignments').select('seat_id,student_id').eq('module_id', moduleId),
+    ]);
+    assertRequest(layoutError, 'No se pudo cargar el plano del aula');
+    assertRequest(assignmentError, 'No se pudieron cargar los puestos');
+    return {
+      moduleId,
+      rows: layout?.rows ?? 3,
+      columns: layout?.columns ?? 5,
+      assignments: Object.fromEntries((assignments || []).map(row => [row.seat_id, row.student_id])),
+    };
+  },
+
+  async save(layout: SeatLayout): Promise<void> {
+    const supabase = createClient();
+    const { error: layoutError } = await supabase.from('seat_layouts').upsert({
+      module_id: layout.moduleId, rows: layout.rows, columns: layout.columns,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'module_id' });
+    assertRequest(layoutError, 'No se pudo guardar el plano del aula');
+
+    const { error: deleteError } = await supabase.from('seat_assignments').delete().eq('module_id', layout.moduleId);
+    assertRequest(deleteError, 'No se pudieron actualizar los puestos');
+    const rows = Object.entries(layout.assignments).map(([seatId, studentId]) => ({
+      module_id: layout.moduleId, student_id: studentId, seat_id: seatId,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rows.length) {
+      const { error: insertError } = await supabase.from('seat_assignments').insert(rows);
+      assertRequest(insertError, 'No se pudieron guardar los puestos');
+    }
+  },
+};
+
+export const classGroupService = {
+  async getByModule(moduleId: string): Promise<ClassGroup[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('class_groups').select('*').eq('module_id', moduleId).order('name');
+    assertRequest(error, 'No se pudieron cargar los grupos');
+    return (data || []).map(row => ({ id: row.id, moduleId: row.module_id, name: row.name, tutor: row.tutor, room: row.room }));
+  },
+  async upsert(group: ClassGroup): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('class_groups').upsert({
+      id: group.id, module_id: group.moduleId, name: group.name, tutor: group.tutor,
+      room: group.room, updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    assertRequest(error, 'No se pudo guardar el grupo');
+  },
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('class_groups').delete().eq('id', id);
+    assertRequest(error, 'No se pudo eliminar el grupo');
+  },
+};
+
+export const gradingScaleService = {
+  async getByModule(moduleId: string): Promise<GradingScale[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('grading_scales').select('*').eq('module_id', moduleId).order('name');
+    assertRequest(error, 'No se pudieron cargar las escalas');
+    return (data || []).map(row => ({
+      id: row.id, moduleId: row.module_id, name: row.name,
+      passingGrade: Number(row.passing_grade), latePenalty: Number(row.late_penalty),
+    }));
+  },
+  async upsert(scale: GradingScale): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('grading_scales').upsert({
+      id: scale.id, module_id: scale.moduleId, name: scale.name,
+      passing_grade: scale.passingGrade, late_penalty: scale.latePenalty,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    assertRequest(error, 'No se pudo guardar la escala');
+  },
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('grading_scales').delete().eq('id', id);
+    assertRequest(error, 'No se pudo eliminar la escala');
   },
 };

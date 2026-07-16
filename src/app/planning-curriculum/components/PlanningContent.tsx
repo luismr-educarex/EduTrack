@@ -371,7 +371,7 @@ export default function PlanningContent() {
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground">{ev.name}</h3>
-                      <p className="text-xs text-muted-foreground capitalize">{ev.type}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{ev.evalType}</p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">{ev.weight}%</span>

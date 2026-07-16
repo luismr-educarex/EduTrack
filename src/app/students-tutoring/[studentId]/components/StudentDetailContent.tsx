@@ -64,7 +64,7 @@ export default function StudentDetailContent({ studentId }: { studentId: string 
 
   const activityRows = useMemo(() => activities.map(activity => {
     const storedGrade = studentGrades.find(item => item.activityId === activity.id);
-    const grade = storedGrade ? storedGrade.grade : getActivityGrade(studentId, activity.id);
+    const grade = storedGrade?.grade ?? null;
     return {
       activity,
       grade,

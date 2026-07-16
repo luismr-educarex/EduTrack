@@ -2,14 +2,6 @@
 import React from 'react';
 import { RadialBarChart, RadialBar, Tooltip, ResponsiveContainer } from 'recharts';
 
-const raData = [
-  { name: 'RA1', coverage: 100, fill: '#16A34A' },
-  { name: 'RA2', coverage: 100, fill: '#16A34A' },
-  { name: 'RA3', coverage: 60, fill: '#D97706' },
-  { name: 'RA4', coverage: 25, fill: '#DC2626' },
-  { name: 'RA5', coverage: 0, fill: '#94A3B8' },
-];
-
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   return (
@@ -20,13 +12,13 @@ const CustomTooltip = ({ active, payload }: any) => {
   );
 };
 
-export default function RARadialChart() {
+export default function RARadialChart({ data }: { data: { name: string; coverage: number; fill: string }[] }) {
   return (
     <ResponsiveContainer width="100%" height={160}>
       <RadialBarChart
         innerRadius="30%"
         outerRadius="90%"
-        data={raData}
+        data={data}
         startAngle={180}
         endAngle={0}
       >

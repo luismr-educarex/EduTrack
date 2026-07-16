@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import PageHeader from '@/components/ui/PageHeader';
 
 import { useEduTrack } from '@/contexts/EduTrackContext';
-import { EVALUATIONS as MOCK_EVALUATIONS, LEARNING_OUTCOMES as MOCK_LEARNING_OUTCOMES, CRITERIA as MOCK_CRITERIA, getGradeLabel, getGradeColor, getRiskLabel, getGradeQualitative, getCEGrade, getCEStatus, getRAGrade, generateCSV } from '@/lib/mockData';
+import { getGradeLabel, getGradeColor, getRiskLabel, getGradeQualitative, getCEGrade, getCEStatus, getRAGrade, generateCSV } from '@/lib/mockData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 type ReportScope = 'module' | 'evaluation' | 'ra' | 'ce';
@@ -15,10 +15,10 @@ type ExportFormat = 'csv' | 'json' | 'html' | 'pdf';
 export default function ReportsContent() {
   const { students: dbStudents, evaluations: dbEvaluations, learningOutcomes: dbLearningOutcomes, criteria: dbCriteria, loading } = useEduTrack();
 
-  const STUDENTS = dbStudents.length > 0 ? dbStudents : [];
-  const EVALUATIONS = dbEvaluations.length > 0 ? dbEvaluations : MOCK_EVALUATIONS;
-  const LEARNING_OUTCOMES = dbLearningOutcomes.length > 0 ? dbLearningOutcomes : MOCK_LEARNING_OUTCOMES;
-  const CRITERIA = dbCriteria.length > 0 ? dbCriteria : MOCK_CRITERIA;
+  const STUDENTS = dbStudents;
+  const EVALUATIONS = dbEvaluations;
+  const LEARNING_OUTCOMES = dbLearningOutcomes;
+  const CRITERIA = dbCriteria;
 
   const [scope, setScope] = useState<ReportScope>('module');
   const [selectedEval, setSelectedEval] = useState<string>('all');

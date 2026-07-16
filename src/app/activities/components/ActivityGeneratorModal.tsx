@@ -3,7 +3,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, ChevronDown, Sparkles, RefreshCw, CheckCircle2, Copy, Info, BookOpen, ListChecks, Lightbulb, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useChat } from '@/lib/hooks/useChat';
-import { CRITERIA, LEARNING_OUTCOMES, EVALUATIONS, WORK_UNITS, Activity, getDifficultyPoints } from '@/lib/mockData';
+import { getDifficultyPoints } from '@/lib/mockData';
+import type { Activity } from '@/lib/services/edutrackService';
+import { useEduTrack } from '@/contexts/EduTrackContext';
 
 interface GeneratedActivity {
   name: string;
@@ -25,12 +27,13 @@ interface RubricRow {
 
 interface ActivityGeneratorModalProps {
   onClose: () => void;
-  onAccept: (activity: Omit<Activity, 'id' | 'correctionCount' | 'reviewedCount'>, generatedRubric: RubricRow[]) => void;
+  onAccept: (activity: Omit<Activity, 'id' | 'moduleId' | 'correctionCount' | 'reviewedCount'>, generatedRubric: RubricRow[]) => void;
 }
 
 const ACTIVITY_TYPES = ['práctica', 'examen', 'proyecto', 'exposición', 'cuestionario', 'trabajo'];
 
 export default function ActivityGeneratorModal({ onClose, onAccept }: ActivityGeneratorModalProps) {
+  const { criteria: CRITERIA, learningOutcomes: LEARNING_OUTCOMES, evaluations: EVALUATIONS, workUnits: WORK_UNITS } = useEduTrack();
   const [step, setStep] = useState<'select' | 'generating' | 'result'>('select');
   const [ceSearch, setCeSearch] = useState('');
   const [expandedRA, setExpandedRA] = useState<string[]>(['ra-1', 'ra-2']);
@@ -176,7 +179,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido con esta estructura exacta (sin text
 
   const handleAccept = () => {
     if (!generated) return;
-    const activity: Omit<Activity, 'id' | 'correctionCount' | 'reviewedCount'> = {
+    const activity: Omit<Activity, 'id' | 'moduleId' | 'correctionCount' | 'reviewedCount'> = {
       name: generated.name,
       unitId: unitId || null,
       evaluationId,

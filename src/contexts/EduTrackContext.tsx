@@ -6,9 +6,11 @@ import {
   workUnitService, activityService, studentService, gradeService,
   raRelationshipService, incidentService, sessionLogService, tutoringService,
   calendarEventService,
+  foundationService,
   Module, Evaluation, LearningOutcome, Criterion, WorkUnit, Activity,
   Student, ActivityGrade, RARelationship, Incident, SessionLog, TutoringAction, CalendarEvent,
 } from '@/lib/services/edutrackService';
+import { configureAcademicCalculations } from '@/lib/mockData';
 
 const ACTIVE_MODULE_ID = 'module-ruslvg5ye';
 
@@ -78,6 +80,10 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
   const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
   const [tutoringActions, setTutoringActions] = useState<TutoringAction[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    configureAcademicCalculations({ activities, criteria, grades, evaluations, workUnits });
+  }, [activities, criteria, grades, evaluations, workUnits]);
 
   const activeModule = modules.find(m => m.id === activeModuleId) ?? modules[0] ?? null;
 
@@ -151,6 +157,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
       try {
         setLoading(true);
         setError(null);
+        await foundationService.claimLegacyData();
         const [
           mods, evals, los, crit, wus, acts, studs, grd, raRels, incs, slogs, tutors, cevents,
         ] = await Promise.all([

@@ -6,7 +6,9 @@ import AppLayout from '@/components/AppLayout';
 import RepositoryPicker from '@/components/github/RepositoryPicker';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import {
-  CalendarEvent, calendarEventService, gradeService, moduleService,
+  CalendarEvent, ClassGroup, ContentItem, GradingScale, calendarEventService,
+  classGroupService, contentService, gradeService, gradingScaleService, moduleService,
+  seatLayoutService,
 } from '@/lib/services/edutrackService';
 import { getChatCompletion } from '@/lib/ai/chatCompletion';
 import { toast } from 'sonner';
@@ -17,14 +19,6 @@ import {
 import type { GitHubFilesResponse } from '@/lib/github/types';
 import { isGitHubRepositoryUrl } from '@/lib/github/url';
 
-type ContentItem = {
-  id: string;
-  unitId: string;
-  title: string;
-  type: string;
-  description: string;
-};
-
 type SeatMap = Record<string, string>;
 type ImportRow = {
   nia: string;
@@ -34,9 +28,6 @@ type ImportRow = {
   activityId?: string;
   error?: string;
 };
-
-type ClassGroup = { id: string; name: string; tutor: string; room: string };
-type GradingScale = { id: string; name: string; passingGrade: number; latePenalty: number };
 
 export const inputClass = 'w-full border border-border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30';
 export const primaryButton = 'inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50';
@@ -111,20 +102,37 @@ export function ContentsFeature() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => setItems(readStored(storageKey, [])), [storageKey]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        let remote = await contentService.getByModule(activeModuleId);
+        const legacy = readStored<Omit<ContentItem, 'moduleId' | 'sortOrder'>[]>(storageKey, []);
+        if (!remote.length && legacy.length) {
+          remote = legacy.map((item, index) => ({ ...item, moduleId: activeModuleId, sortOrder: index }));
+          await Promise.all(remote.map(item => contentService.upsert(item)));
+          localStorage.setItem(`${storageKey}:migrated`, new Date().toISOString());
+        }
+        if (!cancelled) setItems(remote);
+      } catch (cause) {
+        if (!cancelled) toast.error(cause instanceof Error ? cause.message : 'No se pudieron cargar los contenidos');
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [activeModuleId, storageKey]);
 
-  const persist = (next: ContentItem[]) => {
-    setItems(next);
-    localStorage.setItem(storageKey, JSON.stringify(next));
-  };
-
-  const save = () => {
+  const save = async () => {
     if (!form.unitId || !form.title.trim()) return toast.error('Selecciona una unidad e indica un título');
     if (editingId) {
-      persist(items.map(item => item.id === editingId ? { ...item, ...form } : item));
+      const item = items.find(current => current.id === editingId);
+      if (item) await contentService.upsert({ ...item, ...form });
+      setItems(current => current.map(entry => entry.id === editingId ? { ...entry, ...form } : entry));
       toast.success('Contenido actualizado');
     } else {
-      persist([...items, { ...form, id: crypto.randomUUID() }]);
+      const item: ContentItem = { ...form, id: crypto.randomUUID(), moduleId: activeModuleId, sortOrder: items.length };
+      await contentService.upsert(item);
+      setItems(current => [...current, item]);
       toast.success('Contenido creado');
     }
     setEditingId(null);
@@ -180,7 +188,7 @@ export function ContentsFeature() {
             <span className="text-[10px] uppercase rounded bg-primary/10 text-primary px-2 py-1">{item.type}</span>
             <div className="flex-1"><p className="text-sm font-medium">{item.title}</p><p className="text-xs text-muted-foreground mt-1">{item.description}</p></div>
             <button className="text-xs text-primary" onClick={() => edit(item)}>Editar</button>
-            <button aria-label="Eliminar contenido" onClick={() => persist(items.filter(current => current.id !== item.id))}><Trash2 size={15} className="text-danger" /></button>
+            <button aria-label="Eliminar contenido" onClick={async () => { await contentService.delete(item.id); setItems(current => current.filter(entry => entry.id !== item.id)); toast.success('Contenido eliminado'); }}><Trash2 size={15} className="text-danger" /></button>
           </div>)}
         </div>;
       })}</div>
@@ -264,8 +272,31 @@ export function SeatingFeature() {
   const [draggedStudentId, setDraggedStudentId] = useState<string | null>(null);
   const [draggedSeatId, setDraggedSeatId] = useState<string | null>(null);
   const [status, setStatus] = useState('Arrastra un alumno hasta su puesto.');
-  useEffect(() => { setSeats(readStored(storageKey, {})); const dimensions = readStored(dimensionKey, { rows: 3, columns: 5 }); setRows(dimensions.rows); setColumns(dimensions.columns); }, [dimensionKey, storageKey]);
-  const persist = (next: SeatMap) => { setSeats(next); localStorage.setItem(storageKey, JSON.stringify(next)); };
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        let layout = await seatLayoutService.get(activeModuleId);
+        const legacySeats = readStored<SeatMap>(storageKey, {});
+        const legacyDimensions = readStored(dimensionKey, { rows: 3, columns: 5 });
+        if (!Object.keys(layout.assignments).length && Object.keys(legacySeats).length) {
+          layout = { moduleId: activeModuleId, rows: legacyDimensions.rows, columns: legacyDimensions.columns, assignments: legacySeats };
+          await seatLayoutService.save(layout);
+          localStorage.setItem(`${storageKey}:migrated`, new Date().toISOString());
+        }
+        if (!cancelled) { setSeats(layout.assignments); setRows(layout.rows); setColumns(layout.columns); }
+      } catch (cause) {
+        if (!cancelled) toast.error(cause instanceof Error ? cause.message : 'No se pudo cargar el plano del aula');
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [activeModuleId, dimensionKey, storageKey]);
+  const persist = (next: SeatMap, nextRows = rows, nextColumns = columns) => {
+    setSeats(next);
+    void seatLayoutService.save({ moduleId: activeModuleId, rows: nextRows, columns: nextColumns, assignments: next })
+      .catch(cause => toast.error(cause instanceof Error ? cause.message : 'No se pudo guardar el plano'));
+  };
   const clearDrag = () => { setDraggedStudentId(null); setDraggedSeatId(null); };
   const assign = (targetSeat: string, studentId: string) => {
     const next = { ...seats };
@@ -287,7 +318,7 @@ export function SeatingFeature() {
     clearDrag();
     setStatus('Alumno devuelto a la lista de pendientes.');
   };
-  const saveDimensions = (nextRows: number, nextColumns: number) => { setRows(nextRows); setColumns(nextColumns); localStorage.setItem(dimensionKey, JSON.stringify({ rows: nextRows, columns: nextColumns })); };
+  const saveDimensions = (nextRows: number, nextColumns: number) => { setRows(nextRows); setColumns(nextColumns); persist(seats, nextRows, nextColumns); };
   const pendingStudents = students.filter(student => !Object.values(seats).includes(student.id));
   const seatIds = Array.from({ length: rows * columns }, (_, index) => `P${index + 1}`);
   return <Panel title="Aula · Distribución de puestos" description="Arrastra al alumnado a un puesto, intercambia dos puestos o suelta un alumno en pendientes para liberarlo. La distribución se guarda por módulo." actions={<button className="text-xs text-danger" onClick={() => { persist({}); setStatus('Plano vaciado.'); }}>Vaciar plano</button>}>
@@ -423,15 +454,58 @@ export function CourseManagementFeature() {
   const [moduleForm, setModuleForm] = useState({ code: '', name: '', cycle: '', course: new Date().getFullYear() + '–' + (new Date().getFullYear() + 1) });
   const [groupForm, setGroupForm] = useState({ name: '', tutor: '', room: '' });
   const [scaleForm, setScaleForm] = useState({ name: '', passingGrade: 5, latePenalty: 0 });
-  useEffect(() => { const stored = readStored(storageKey, { groups: [] as ClassGroup[], scales: [] as GradingScale[] }); setGroups(stored.groups); setScales(stored.scales); }, [storageKey]);
-  const persist = (nextGroups: ClassGroup[], nextScales: GradingScale[]) => { setGroups(nextGroups); setScales(nextScales); localStorage.setItem(storageKey, JSON.stringify({ groups: nextGroups, scales: nextScales })); };
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        let [remoteGroups, remoteScales] = await Promise.all([
+          classGroupService.getByModule(activeModuleId), gradingScaleService.getByModule(activeModuleId),
+        ]);
+        const legacy = readStored(storageKey, {
+          groups: [] as Omit<ClassGroup, 'moduleId'>[], scales: [] as Omit<GradingScale, 'moduleId'>[],
+        });
+        if (!remoteGroups.length && legacy.groups.length) {
+          remoteGroups = legacy.groups.map(group => ({ ...group, moduleId: activeModuleId }));
+          await Promise.all(remoteGroups.map(group => classGroupService.upsert(group)));
+        }
+        if (!remoteScales.length && legacy.scales.length) {
+          remoteScales = legacy.scales.map(scale => ({ ...scale, moduleId: activeModuleId }));
+          await Promise.all(remoteScales.map(scale => gradingScaleService.upsert(scale)));
+        }
+        if ((legacy.groups.length || legacy.scales.length)) localStorage.setItem(`${storageKey}:migrated`, new Date().toISOString());
+        if (!cancelled) { setGroups(remoteGroups); setScales(remoteScales); }
+      } catch (cause) {
+        if (!cancelled) toast.error(cause instanceof Error ? cause.message : 'No se pudo cargar la gestión académica');
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [activeModuleId, storageKey]);
+  const addGroup = async () => {
+    if (!groupForm.name.trim()) return toast.error('Indica el nombre del grupo');
+    const group: ClassGroup = { id: crypto.randomUUID(), moduleId: activeModuleId, ...groupForm };
+    await classGroupService.upsert(group);
+    setGroups(current => [...current, group]);
+    setGroupForm({ name: '', tutor: '', room: '' });
+    toast.success('Grupo guardado');
+  };
+  const deleteGroup = async (id: string) => { await classGroupService.delete(id); setGroups(current => current.filter(group => group.id !== id)); };
+  const addScale = async () => {
+    if (!scaleForm.name.trim()) return toast.error('Indica un nombre');
+    const scale: GradingScale = { id: crypto.randomUUID(), moduleId: activeModuleId, ...scaleForm };
+    await gradingScaleService.upsert(scale);
+    setScales(current => [...current, scale]);
+    setScaleForm({ name: '', passingGrade: 5, latePenalty: 0 });
+    toast.success('Escala guardada');
+  };
+  const deleteScale = async (id: string) => { await gradingScaleService.delete(id); setScales(current => current.filter(scale => scale.id !== id)); };
   const addModule = async () => { if (!moduleForm.code.trim() || !moduleForm.name.trim() || !moduleForm.cycle.trim()) return toast.error('Código, nombre y ciclo son obligatorios'); const id = `module-${crypto.randomUUID()}`; await moduleService.upsert({ id, ...moduleForm, evaluationCount: 2, totalStudents: 0 }); setActiveModuleId(id); toast.success('Módulo creado'); window.location.reload(); };
   const removeModule = async (id: string) => { if (modules.length <= 1) return toast.error('Debe existir al menos un módulo'); if (!confirm('Se eliminará el módulo y todos sus datos relacionados. ¿Continuar?')) return; await moduleService.delete(id); if (id === activeModule?.id) setActiveModuleId(modules.find(module => module.id !== id)!.id); toast.success('Módulo eliminado'); window.location.reload(); };
   const tabs = [{ id: 'modules', label: 'Módulos' }, { id: 'groups', label: 'Grupos' }, { id: 'enrollments', label: 'Matrículas' }, { id: 'scales', label: 'Escalas' }] as const;
   return <div className="space-y-5"><div className="flex gap-2 border-b border-border">{tabs.map(item => <button key={item.id} onClick={() => setTab(item.id)} className={`px-4 py-2 text-sm border-b-2 ${tab === item.id ? 'border-primary text-primary font-semibold' : 'border-transparent text-muted-foreground'}`}>{item.label}</button>)}</div>
     {tab === 'modules' && <Panel title="Módulos formativos" description="Crea, activa o elimina módulos de EduTrack."><div className="space-y-2 mb-5">{modules.map(module => <div key={module.id} className={`border rounded-lg p-3 flex items-center gap-3 ${module.id === activeModule?.id ? 'border-primary bg-primary/5' : 'border-border'}`}><Users size={17} className="text-primary" /><button className="flex-1 text-left" onClick={() => setActiveModuleId(module.id)}><p className="text-sm font-semibold">{module.code} · {module.name}</p><p className="text-xs text-muted-foreground">{module.cycle} · {module.course} · {module.totalStudents} alumnos</p></button><button onClick={() => removeModule(module.id)}><Trash2 size={15} className="text-danger" /></button></div>)}</div><div className="grid sm:grid-cols-2 gap-3"><input className={inputClass} placeholder="Código" value={moduleForm.code} onChange={e => setModuleForm(form => ({ ...form, code: e.target.value }))} /><input className={inputClass} placeholder="Nombre" value={moduleForm.name} onChange={e => setModuleForm(form => ({ ...form, name: e.target.value }))} /><input className={inputClass} placeholder="Ciclo y curso" value={moduleForm.cycle} onChange={e => setModuleForm(form => ({ ...form, cycle: e.target.value }))} /><input className={inputClass} placeholder="Curso académico" value={moduleForm.course} onChange={e => setModuleForm(form => ({ ...form, course: e.target.value }))} /></div><button className={`${primaryButton} mt-3`} onClick={addModule}><Plus size={16} />Crear módulo</button></Panel>}
-    {tab === 'groups' && <Panel title="Grupos de clase" description="Define grupos, tutoría y aula para el módulo activo."><div className="grid md:grid-cols-4 gap-3 mb-4"><input className={inputClass} placeholder="Nombre del grupo" value={groupForm.name} onChange={e => setGroupForm(form => ({ ...form, name: e.target.value }))} /><input className={inputClass} placeholder="Tutor/a" value={groupForm.tutor} onChange={e => setGroupForm(form => ({ ...form, tutor: e.target.value }))} /><input className={inputClass} placeholder="Aula" value={groupForm.room} onChange={e => setGroupForm(form => ({ ...form, room: e.target.value }))} /><button className={primaryButton} onClick={() => { if (!groupForm.name.trim()) return toast.error('Indica el nombre del grupo'); persist([...groups, { id: crypto.randomUUID(), ...groupForm }], scales); setGroupForm({ name: '', tutor: '', room: '' }); }}>Añadir grupo</button></div><div className="space-y-2">{groups.map(group => <div key={group.id} className="border border-border rounded-lg p-3 flex items-center"><div className="flex-1"><p className="text-sm font-semibold">{group.name}</p><p className="text-xs text-muted-foreground">Tutoría: {group.tutor || '—'} · Aula: {group.room || '—'}</p></div><button onClick={() => persist(groups.filter(current => current.id !== group.id), scales)}><Trash2 size={15} className="text-danger" /></button></div>)}{groups.length === 0 && <p className="text-sm text-muted-foreground">No hay grupos creados.</p>}</div></Panel>}
+    {tab === 'groups' && <Panel title="Grupos de clase" description="Define grupos, tutoría y aula para el módulo activo."><div className="grid md:grid-cols-4 gap-3 mb-4"><input className={inputClass} placeholder="Nombre del grupo" value={groupForm.name} onChange={e => setGroupForm(form => ({ ...form, name: e.target.value }))} /><input className={inputClass} placeholder="Tutor/a" value={groupForm.tutor} onChange={e => setGroupForm(form => ({ ...form, tutor: e.target.value }))} /><input className={inputClass} placeholder="Aula" value={groupForm.room} onChange={e => setGroupForm(form => ({ ...form, room: e.target.value }))} /><button className={primaryButton} onClick={addGroup}>Añadir grupo</button></div><div className="space-y-2">{groups.map(group => <div key={group.id} className="border border-border rounded-lg p-3 flex items-center"><div className="flex-1"><p className="text-sm font-semibold">{group.name}</p><p className="text-xs text-muted-foreground">Tutoría: {group.tutor || '—'} · Aula: {group.room || '—'}</p></div><button onClick={() => deleteGroup(group.id)}><Trash2 size={15} className="text-danger" /></button></div>)}{groups.length === 0 && <p className="text-sm text-muted-foreground">No hay grupos creados.</p>}</div></Panel>}
     {tab === 'enrollments' && <Panel title="Matrículas del módulo" description="Consulta el alumnado matriculado y su situación académica."><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b"><th className="text-left p-2">NIA</th><th className="text-left p-2">Alumno</th><th className="text-left p-2">Correo</th><th className="text-right p-2">Nota</th><th className="text-left p-2">Riesgo</th></tr></thead><tbody>{students.map(student => <tr key={student.id} className="border-b"><td className="p-2">{student.nia}</td><td className="p-2 font-medium">{student.name}</td><td className="p-2 text-muted-foreground">{student.email}</td><td className="p-2 text-right">{student.moduleGrade ?? '—'}</td><td className="p-2 capitalize">{student.riskLevel}</td></tr>)}</tbody></table></div></Panel>}
-    {tab === 'scales' && <Panel title="Escalas de calificación" description="Configura reglas de aprobado y penalización por retraso."><div className="grid md:grid-cols-4 gap-3 mb-4"><input className={inputClass} placeholder="Nombre" value={scaleForm.name} onChange={e => setScaleForm(form => ({ ...form, name: e.target.value }))} /><input type="number" min="0" max="10" step="0.1" className={inputClass} value={scaleForm.passingGrade} onChange={e => setScaleForm(form => ({ ...form, passingGrade: Number(e.target.value) }))} /><input type="number" min="0" max="100" className={inputClass} value={scaleForm.latePenalty} onChange={e => setScaleForm(form => ({ ...form, latePenalty: Number(e.target.value) }))} /><button className={primaryButton} onClick={() => { if (!scaleForm.name.trim()) return toast.error('Indica un nombre'); persist(groups, [...scales, { id: crypto.randomUUID(), ...scaleForm }]); setScaleForm({ name: '', passingGrade: 5, latePenalty: 0 }); }}>Añadir escala</button></div><div className="space-y-2">{scales.map(scale => <div key={scale.id} className="border border-border rounded-lg p-3 flex items-center"><div className="flex-1"><p className="text-sm font-semibold">{scale.name}</p><p className="text-xs text-muted-foreground">Aprobado desde {scale.passingGrade} · Penalización tardía {scale.latePenalty}%</p></div><button onClick={() => persist(groups, scales.filter(current => current.id !== scale.id))}><Trash2 size={15} className="text-danger" /></button></div>)}{scales.length === 0 && <p className="text-sm text-muted-foreground">No hay escalas personalizadas.</p>}</div></Panel>}
+    {tab === 'scales' && <Panel title="Escalas de calificación" description="Configura reglas de aprobado y penalización por retraso."><div className="grid md:grid-cols-4 gap-3 mb-4"><input className={inputClass} placeholder="Nombre" value={scaleForm.name} onChange={e => setScaleForm(form => ({ ...form, name: e.target.value }))} /><input type="number" min="0" max="10" step="0.1" className={inputClass} value={scaleForm.passingGrade} onChange={e => setScaleForm(form => ({ ...form, passingGrade: Number(e.target.value) }))} /><input type="number" min="0" max="100" className={inputClass} value={scaleForm.latePenalty} onChange={e => setScaleForm(form => ({ ...form, latePenalty: Number(e.target.value) }))} /><button className={primaryButton} onClick={addScale}>Añadir escala</button></div><div className="space-y-2">{scales.map(scale => <div key={scale.id} className="border border-border rounded-lg p-3 flex items-center"><div className="flex-1"><p className="text-sm font-semibold">{scale.name}</p><p className="text-xs text-muted-foreground">Aprobado desde {scale.passingGrade} · Penalización tardía {scale.latePenalty}%</p></div><button onClick={() => deleteScale(scale.id)}><Trash2 size={15} className="text-danger" /></button></div>)}{scales.length === 0 && <p className="text-sm text-muted-foreground">No hay escalas personalizadas.</p>}</div></Panel>}
   </div>;
 }

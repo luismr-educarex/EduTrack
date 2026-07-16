@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { completion } from '@rocketnew/llm-sdk';
+import { getAuthenticatedUser } from '@/lib/supabase/server';
 
 const API_KEYS: Record<string, string | undefined> = {
   OPEN_AI: process.env.OPENAI_API_KEY,
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest) {
   let body: any = {};
 
   try {
+    if (!await getAuthenticatedUser()) {
+      return NextResponse.json({ error: 'Autenticación requerida.' }, { status: 401 });
+    }
+
     body = await request.json();
     const { provider, model, messages, stream = false, parameters = {} } = body;
 

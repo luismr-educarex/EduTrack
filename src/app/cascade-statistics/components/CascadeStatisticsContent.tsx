@@ -4,8 +4,7 @@ import { GitBranch, AlertTriangle, TrendingUp, Users, ChevronDown, ChevronRight,
 import PageHeader from '@/components/ui/PageHeader';
 import {
   getRAGrade, getEffectiveRAGrade, getRARelationshipsToTarget, getRARelationshipsFromSource,
-  getGradeColor, getRiskBadge, getRiskLabel,
-  STUDENTS as MOCK_STUDENTS, LEARNING_OUTCOMES as MOCK_LEARNING_OUTCOMES, RA_RELATIONSHIPS as MOCK_RA_RELATIONSHIPS
+  getGradeColor, getRiskBadge, getRiskLabel
 } from '@/lib/mockData';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 
@@ -42,9 +41,9 @@ interface RiskAlert {
 export default function CascadeStatisticsContent() {
   const { students: dbStudents, learningOutcomes: dbLearningOutcomes, raRelationships: dbRARelationships, loading } = useEduTrack();
 
-  const STUDENTS = dbStudents.length > 0 ? dbStudents : MOCK_STUDENTS;
-  const LEARNING_OUTCOMES = dbLearningOutcomes.length > 0 ? dbLearningOutcomes : MOCK_LEARNING_OUTCOMES;
-  const RA_RELATIONSHIPS = dbRARelationships.length > 0 ? dbRARelationships : MOCK_RA_RELATIONSHIPS;
+  const STUDENTS = dbStudents;
+  const LEARNING_OUTCOMES = dbLearningOutcomes;
+  const RA_RELATIONSHIPS = dbRARelationships;
 
   const [expandedRule, setExpandedRule] = useState<string | null>(null);
 

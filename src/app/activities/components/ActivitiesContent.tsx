@@ -8,9 +8,8 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { RUBRICS, getDifficultyPoints } from '@/lib/mockData';
 import { useEduTrack } from '@/contexts/EduTrackContext';
-import { activityService } from '@/lib/services/edutrackService';
+import { activityService, type Activity } from '@/lib/services/edutrackService';
 import ActivityGeneratorModal from './ActivityGeneratorModal';
-import { Activity } from '@/lib/mockData';
 
 
 type FilterStatus = 'all' | 'borrador' | 'publicada' | 'en_correccion' | 'pendiente_revision' | 'revisada_docente' | 'cerrada';
@@ -36,7 +35,7 @@ const STATUS_FLOW: Record<string, { next: string; label: string; color: string }
 const ACTIVITY_TYPES = ['práctica', 'examen', 'proyecto', 'exposición', 'cuestionario', 'trabajo'];
 
 export default function ActivitiesContent() {
-  const { activities: dbActivities, evaluations: EVALUATIONS, workUnits: WORK_UNITS, criteria: CRITERIA, learningOutcomes: LEARNING_OUTCOMES, loading, refreshActivities } = useEduTrack();
+  const { activeModuleId, activities: dbActivities, evaluations: EVALUATIONS, workUnits: WORK_UNITS, criteria: CRITERIA, learningOutcomes: LEARNING_OUTCOMES, loading, refreshActivities } = useEduTrack();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterEval, setFilterEval] = useState('all');
@@ -103,7 +102,7 @@ export default function ActivitiesContent() {
     try {
       const actData: Activity = {
         id: selectedActivity?.id ?? `act-${Date.now()}`,
-        moduleId: 'module-ruslvg5ye',
+        moduleId: activeModuleId,
         name: formData.name,
         unitId: formData.unitId || null,
         evaluationId: formData.evaluationId,
@@ -168,11 +167,11 @@ export default function ActivitiesContent() {
     setShowModal(true);
   };
 
-  const handleGeneratorAccept = async (activityData: Omit<Activity, 'id' | 'correctionCount' | 'reviewedCount'>, _generatedRubric: unknown[]) => {
+  const handleGeneratorAccept = async (activityData: Omit<Activity, 'id' | 'moduleId' | 'correctionCount' | 'reviewedCount'>, _generatedRubric: unknown[]) => {
     try {
       const newAct: Activity = {
         id: `act-${Date.now()}`,
-        moduleId: 'module-ruslvg5ye',
+        moduleId: activeModuleId,
         ...activityData,
         correctionCount: 0,
         reviewedCount: 0,

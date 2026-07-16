@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { CE_PERFORMANCE } from '@/lib/mockData';
+
+type CEPerformanceRow = { ce: string; superado: number; parcial: number; noSuperado: number; noEvaluado: number };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -19,8 +20,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export default function CEPerformanceChart() {
-  const data = CE_PERFORMANCE.slice(0, 13).map(d => ({
+export default function CEPerformanceChart({ rows }: { rows: CEPerformanceRow[] }) {
+  const data = rows.slice(0, 13).map(d => ({
     ce: d.ce,
     Superado: d.superado,
     Parcial: d.parcial,

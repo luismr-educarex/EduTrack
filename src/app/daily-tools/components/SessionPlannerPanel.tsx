@@ -1,7 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, GripVertical, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import { WORK_UNITS, LEARNING_OUTCOMES } from '@/lib/mockData';
+import { useEduTrack } from '@/contexts/EduTrackContext';
 import { toast } from 'sonner';
 
 interface SessionBlock {
@@ -29,13 +29,20 @@ const DEFAULT_BLOCKS: SessionBlock[] = [
 ];
 
 export default function SessionPlannerPanel() {
+  const { workUnits: WORK_UNITS, learningOutcomes: LEARNING_OUTCOMES } = useEduTrack();
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
-  const [selectedUnit, setSelectedUnit] = useState(WORK_UNITS[0]?.id || '');
+  const [selectedUnit, setSelectedUnit] = useState('');
   const [selectedRA, setSelectedRA] = useState('');
   const [objective, setObjective] = useState('');
   const [blocks, setBlocks] = useState<SessionBlock[]>(DEFAULT_BLOCKS);
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedUnit && WORK_UNITS.length > 0) {
+      setSelectedUnit(WORK_UNITS[0].id);
+    }
+  }, [selectedUnit, WORK_UNITS]);
 
   const totalMinutes = blocks.reduce((sum, b) => sum + b.duration, 0);
   const hours = Math.floor(totalMinutes / 60);

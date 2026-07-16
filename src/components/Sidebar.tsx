@@ -10,6 +10,7 @@ import {
   CalendarDays, GanttChartSquare, Armchair, Bot, GraduationCap, FolderGit2 as Github
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NavItem {
   key: string;
@@ -53,6 +54,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { activeModule, modules, setActiveModuleId } = useEduTrack();
+  const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [moduleOpen, setModuleOpen] = useState(false);
 
@@ -254,7 +256,7 @@ export default function Sidebar() {
             <Settings size={18} className="text-muted-foreground flex-shrink-0" />
             {!collapsed && <span>Configuración</span>}
           </Link>
-          <button className={`w-full flex items-center gap-3 px-2 py-2 rounded-md text-secondary-foreground hover:bg-red-50 hover:text-danger transition-colors text-sm ${collapsed ? 'justify-center' : ''}`}>
+          <button onClick={() => signOut()} className={`w-full flex items-center gap-3 px-2 py-2 rounded-md text-secondary-foreground hover:bg-red-50 hover:text-danger transition-colors text-sm ${collapsed ? 'justify-center' : ''}`}>
             <LogOut size={18} className="flex-shrink-0" />
             {!collapsed && <span>Salir</span>}
           </button>

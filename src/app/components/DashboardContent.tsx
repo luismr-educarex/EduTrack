@@ -6,7 +6,7 @@ import MetricCard from '@/components/ui/MetricCard';
 import StatusBadge from '@/components/ui/StatusBadge';
 import PageHeader from '@/components/ui/PageHeader';
 import Link from 'next/link';
-import { getGradeLabel, getGradeColor, getRiskBadge, getRiskLabel, getIncidentTypeColor, getIncidentTypeLabel, CE_PERFORMANCE, CORRECTIONS } from '@/lib/mockData';
+import { getCEGrade, getCEStatus, getEvalWeightedGrade, getGradeLabel, getGradeColor, getRiskBadge, getRiskLabel, getIncidentTypeColor, getIncidentTypeLabel, getRAGrade } from '@/lib/mockData';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 
 const CEPerformanceChart = dynamic(() => import('./CEPerformanceChart'), { ssr: false });
@@ -14,18 +14,32 @@ const GradeTrendChart = dynamic(() => import('./GradeTrendChart'), { ssr: false 
 const RARadialChart = dynamic(() => import('./RARadialChart'), { ssr: false });
 
 export default function DashboardContent() {
-  const { students: STUDENTS, activities: ACTIVITIES, learningOutcomes: LEARNING_OUTCOMES, workUnits: WORK_UNITS, incidents: INCIDENTS, sessionLogs: SESSION_LOGS, loading } = useEduTrack();
+  const { students: STUDENTS, activities: ACTIVITIES, grades: GRADES, learningOutcomes: LEARNING_OUTCOMES, criteria: CRITERIA, evaluations: EVALUATIONS, workUnits: WORK_UNITS, incidents: INCIDENTS, sessionLogs: SESSION_LOGS, loading } = useEduTrack();
   const [lastUpdate] = useState(new Date()?.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
 
   const atRiskStudents = STUDENTS?.filter(s => s?.riskLevel === 'high' || s?.riskLevel === 'medium');
   const pendingActivities = ACTIVITIES?.filter(a => a?.status === 'en_correccion' || a?.status === 'pendiente_revision');
-  const ceCovered = 13;
-  const raPassed = LEARNING_OUTCOMES?.filter((_, i) => i < 2)?.length;
+  const ceCovered = CRITERIA.filter(criterion => ACTIVITIES.some(activity => activity.ceIds.includes(criterion.id))).length;
+  const raPassed = LEARNING_OUTCOMES.filter(outcome => {
+    const values = STUDENTS.map(student => getRAGrade(student.id, outcome.id)).filter((value): value is number => value !== null);
+    return values.length > 0 && values.filter(value => value >= 5).length / values.length >= 0.5;
+  }).length;
   const avgGrade = STUDENTS?.length ? STUDENTS?.reduce((s, st) => s + (st?.moduleGrade ?? 0), 0) / STUDENTS?.length : 0;
   const taughtAvg = WORK_UNITS?.length ? Math.round(WORK_UNITS?.reduce((s, ut) => s + ut?.taughtPercentage, 0) / WORK_UNITS?.length) : 0;
 
-  const worstCE = [...CE_PERFORMANCE]?.filter(c => c?.avg !== null)?.sort((a, b) => (a?.avg ?? 10) - (b?.avg ?? 10))?.slice(0, 5);
-  const recentCorrections = CORRECTIONS?.slice(0, 4);
+  const cePerformance = CRITERIA.map(criterion => {
+    const values = STUDENTS.map(student => getCEGrade(student.id, criterion.id));
+    const evaluated = values.filter((value): value is number => value !== null);
+    const statuses = values.map(getCEStatus);
+    return { ce: criterion.code, avg: evaluated.length ? evaluated.reduce((sum, value) => sum + value, 0) / evaluated.length : null, superado: statuses.filter(status => status === 'superado').length, parcial: statuses.filter(status => status === 'parcial').length, noSuperado: statuses.filter(status => status === 'no_superado').length, noEvaluado: statuses.filter(status => status === 'no_evaluado').length };
+  });
+  const worstCE = cePerformance.filter(c => c.avg !== null).sort((a, b) => (a.avg ?? 10) - (b.avg ?? 10)).slice(0, 5);
+  const raCoverage = LEARNING_OUTCOMES.map(outcome => { const rows = CRITERIA.filter(criterion => criterion.raId === outcome.id); const covered = rows.filter(criterion => ACTIVITIES.some(activity => activity.ceIds.includes(criterion.id))).length; const coverage = rows.length ? Math.round(covered / rows.length * 100) : 0; return { name: outcome.code, label: outcome.description, coverage, fill: coverage >= 80 ? '#16A34A' : coverage >= 50 ? '#D97706' : coverage > 0 ? '#DC2626' : '#94A3B8' }; });
+  const gradeTrend = EVALUATIONS.map(evaluation => { const values = STUDENTS.map(student => getEvalWeightedGrade(student.id, evaluation.id)).filter((value): value is number => value !== null); return { label: evaluation.name, avg: values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)) : null }; });
+  const recentCorrections = GRADES.filter(grade => grade.grade !== null).slice(0, 4).map(grade => ({
+    id: grade.id, studentId: grade.studentId, activityId: grade.activityId,
+    teacherScore: grade.grade, aiScore: null as number | null, feedback: '', status: 'revisada_docente',
+  }));
 
   if (loading) {
     return (
@@ -58,8 +72,8 @@ export default function DashboardContent() {
       />
       {/* KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <MetricCard label="Cobertura de CE" value={`${Math.round((ceCovered / 22) * 100)}%`}
-          sub={`${ceCovered} de 22 CE con actividad asignada`} icon={<BookCheck size={16} />}
+        <MetricCard label="Cobertura de CE" value={`${CRITERIA.length ? Math.round((ceCovered / CRITERIA.length) * 100) : 0}%`}
+          sub={`${ceCovered} de ${CRITERIA.length} CE con actividad asignada`} icon={<BookCheck size={16} />}
           trend="up" trendValue="+5 esta semana" variant="info" />
         <MetricCard label="Alumnos en riesgo" value={atRiskStudents?.length}
           sub={`${STUDENTS?.filter(s => s?.riskLevel === 'high')?.length} críticos · ${STUDENTS?.filter(s => s?.riskLevel === 'medium')?.length} en atención`}
@@ -103,7 +117,7 @@ export default function DashboardContent() {
             </div>
             <span className="text-xs text-muted-foreground">CE evaluados: 13/22</span>
           </div>
-          <CEPerformanceChart />
+          <CEPerformanceChart rows={cePerformance} />
         </div>
 
         {/* RA Coverage Radial */}
@@ -114,21 +128,15 @@ export default function DashboardContent() {
               <p className="text-xs text-muted-foreground">Actividades asignadas / CE del RA</p>
             </div>
           </div>
-          <RARadialChart />
+          <RARadialChart data={raCoverage} />
           <div className="mt-3 space-y-1.5">
-            {[
-              { name: 'RA1', label: 'Gestión de Procesos', pct: 100, color: 'bg-success' },
-              { name: 'RA2', label: 'Multihilo', pct: 100, color: 'bg-success' },
-              { name: 'RA3', label: 'Sockets', pct: 60, color: 'bg-warning' },
-              { name: 'RA4', label: 'Servicios Web', pct: 25, color: 'bg-danger' },
-              { name: 'RA5', label: 'Seguridad', pct: 0, color: 'bg-muted' },
-            ]?.map((ra) => (
+            {raCoverage.map((ra) => (
               <div key={`ra-cov-${ra?.name}`} className="flex items-center gap-2 text-xs">
                 <span className="font-semibold w-8 text-foreground">{ra?.name}</span>
                 <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className={`h-full ${ra?.color} rounded-full`} style={{ width: `${ra?.pct}%` }} />
+                  <div className="h-full rounded-full" style={{ width: `${ra.coverage}%`, backgroundColor: ra.fill }} />
                 </div>
-                <span className="w-8 text-right font-mono-nums text-muted-foreground">{ra?.pct}%</span>
+                <span className="w-8 text-right font-mono-nums text-muted-foreground">{ra.coverage}%</span>
               </div>
             ))}
           </div>
@@ -224,7 +232,7 @@ export default function DashboardContent() {
           <div className="bg-card rounded-xl border border-border shadow-card p-4 flex-1">
             <h2 className="text-sm font-semibold text-foreground mb-1">Tendencia de calificaciones</h2>
             <p className="text-xs text-muted-foreground mb-3">Media del grupo por evaluación</p>
-            <GradeTrendChart />
+            <GradeTrendChart data={gradeTrend} />
           </div>
         </div>
       </div>
@@ -233,7 +241,7 @@ export default function DashboardContent() {
         {/* Recent corrections */}
         <div className="bg-card rounded-xl border border-border shadow-card p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground">Últimas correcciones</h2>
+            <h2 className="text-sm font-semibold text-foreground">Calificaciones registradas</h2>
             <Link href="/activities" className="text-xs text-primary hover:underline flex items-center gap-1">Ver más <ChevronRight size={11} /></Link>
           </div>
           <div className="space-y-2">

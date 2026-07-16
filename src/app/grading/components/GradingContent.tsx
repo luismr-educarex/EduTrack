@@ -6,8 +6,6 @@ import Link from 'next/link';
 import PageHeader from '@/components/ui/PageHeader';
 import StatusBadge from '@/components/ui/StatusBadge';
 import {
-  STUDENTS as MOCK_STUDENTS, ACTIVITIES as MOCK_ACTIVITIES, EVALUATIONS as MOCK_EVALUATIONS,
-  WORK_UNITS as MOCK_WORK_UNITS, LEARNING_OUTCOMES as MOCK_LEARNING_OUTCOMES, CRITERIA as MOCK_CRITERIA,
   getActivityGrade, getRAGrade, getCEGrade, getCEStatus, getCEStatusColor, getCEStatusLabel,
   getGradeLabel, getGradeColor, getRiskBadge, getRiskLabel, getGradeQualitative, generateCSV,
   buildStudentGradeMap, getActivityCEWeight, getActivityValuePct, getDifficultyPoints,
@@ -107,7 +105,7 @@ function StudentGradeMapView({ student }: { student: Student }) {
           <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-foreground">{ev.evaluationName}</span>
-              <span className="text-xs text-muted-foreground">Peso: {MOCK_EVALUATIONS.find(e => e.id === ev.evaluationId)?.weight}%</span>
+              <span className="text-xs text-muted-foreground">Peso: {ev.weight}%</span>
             </div>
             <div className="flex items-center gap-2">
               {ev.grade !== null ? (
@@ -249,14 +247,13 @@ function StudentGradeMapView({ student }: { student: Student }) {
 export default function GradingContent() {
   const { students: dbStudents, activities: dbActivities, evaluations: dbEvaluations, workUnits: dbWorkUnits, learningOutcomes: dbLearningOutcomes, criteria: dbCriteria, grades: dbGrades, raRelationships: dbRARelationships, loading, refreshGrades } = useEduTrack();
 
-  // Use Supabase data when available, fall back to mock for computation helpers
-  const STUDENTS = dbStudents.length > 0 ? dbStudents : MOCK_STUDENTS;
-  const ACTIVITIES = dbActivities.length > 0 ? dbActivities : MOCK_ACTIVITIES;
-  const EVALUATIONS = dbEvaluations.length > 0 ? dbEvaluations : MOCK_EVALUATIONS;
-  const WORK_UNITS = dbWorkUnits.length > 0 ? dbWorkUnits : MOCK_WORK_UNITS;
-  const LEARNING_OUTCOMES = dbLearningOutcomes.length > 0 ? dbLearningOutcomes : MOCK_LEARNING_OUTCOMES;
-  const CRITERIA = dbCriteria.length > 0 ? dbCriteria : MOCK_CRITERIA;
-  const RA_RELATIONSHIPS = dbRARelationships.length > 0 ? dbRARelationships : MOCK_RA_RELATIONSHIPS;
+  const STUDENTS = dbStudents;
+  const ACTIVITIES = dbActivities;
+  const EVALUATIONS = dbEvaluations;
+  const WORK_UNITS = dbWorkUnits;
+  const LEARNING_OUTCOMES = dbLearningOutcomes;
+  const CRITERIA = dbCriteria;
+  const RA_RELATIONSHIPS = dbRARelationships;
 
   // Build grade lookup from Supabase grades
   const gradeMap = useMemo(() => {
@@ -265,13 +262,9 @@ export default function GradingContent() {
     return map;
   }, [dbGrades]);
 
-  // Override getActivityGrade to use Supabase data when available
   const getActivityGradeFromDB = (studentId: string, activityId: string): number | null => {
-    if (dbGrades.length > 0) {
-      const key = `${studentId}:${activityId}`;
-      return gradeMap.has(key) ? gradeMap.get(key) ?? null : null;
-    }
-    return getActivityGrade(studentId, activityId);
+    const key = `${studentId}:${activityId}`;
+    return gradeMap.has(key) ? gradeMap.get(key) ?? null : null;
   };
 
     const [tab, setTab] = useState<GradeTab>('evaluacion');
