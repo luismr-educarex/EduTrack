@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client';
 import {
   parseGradingGraph,
+  parseTemplateBank,
   validateRubricLevels,
   type ImplicationLevel,
 } from '@/lib/domain/criterionGrading';
@@ -881,17 +882,15 @@ export const gradeService = {
   async upsertGrade(studentId: string, activityId: string, grade: number | null): Promise<void> {
     const supabase = createClient();
     try {
-      const { error } = await supabase
-        .from('activity_grades')
-        .upsert(
-          {
-            student_id: studentId,
-            activity_id: activityId,
-            grade,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'student_id,activity_id' }
-        );
+      const { error } = await supabase.from('activity_grades').upsert(
+        {
+          student_id: studentId,
+          activity_id: activityId,
+          grade,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'student_id,activity_id' }
+      );
       if (error) {
         if (isSchemaError(error)) throw error;
       }
@@ -1119,11 +1118,9 @@ export const criterionGraphImportService = {
       justification: edge.justification,
     }));
     if (implicationPayload.length) {
-      const { error } = await supabase
-        .from('criterion_implications')
-        .upsert(implicationPayload, {
-          onConflict: 'module_id,source_criterion_id,target_criterion_id',
-        });
+      const { error } = await supabase.from('criterion_implications').upsert(implicationPayload, {
+        onConflict: 'module_id,source_criterion_id,target_criterion_id',
+      });
       if (error) throw error;
     }
     if (graph.rejections.length) {
@@ -1142,6 +1139,46 @@ export const criterionGraphImportService = {
       implications: graph.implications.length,
       rejections: graph.rejections.length,
     };
+  },
+};
+
+export const activityTemplateService = {
+  async importBank(moduleId: string, input: unknown): Promise<number> {
+    const [criteria, implications] = await Promise.all([
+      criterionService.getByModule(moduleId),
+      criterionImplicationService.getByModule(moduleId),
+    ]);
+    const templates = parseTemplateBank(input, criteria, implications);
+    if (!templates.length) return 0;
+    const supabase = createClient();
+    const { error } = await supabase.from('activity_templates').upsert(
+      templates.map((template) => ({
+        id: template.id,
+        module_id: moduleId,
+        criterion_id: template.criterionId,
+        name: String(template.content?.titulo ?? template.id),
+        roles: template.roles,
+        rubric_items: template.rubricItems,
+        content: template.content ?? {},
+        validated: false,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: 'id' }
+    );
+    if (error) throw error;
+    return templates.length;
+  },
+
+  async setValidated(id: string, validated: boolean): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('activity_templates')
+      .update({
+        validated,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 

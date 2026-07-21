@@ -7,6 +7,7 @@ import { useEduTrack } from '@/contexts/EduTrackContext';
 import {
   criterionGradingConfigService,
   criterionGraphImportService,
+  activityTemplateService,
   criterionImplicationService,
   rubricItemGradeService,
   rubricItemService,
@@ -892,8 +893,14 @@ function GradingPanel() {
 }
 
 function PlanningPanel() {
-  const { criteria, criterionImplications, criterionGradingConfig: config } = useEduTrack();
+  const {
+    activeModuleId,
+    criteria,
+    criterionImplications,
+    criterionGradingConfig: config,
+  } = useEduTrack();
   const [pending, setPending] = useState<string[]>(criteria.map((item) => item.id));
+  const [templateMessage, setTemplateMessage] = useState('');
   const domainCriteria = criteria.map((item) => ({
     id: item.id,
     raId: item.raId,
@@ -946,6 +953,36 @@ function PlanningPanel() {
             </label>
           ))}
         </div>
+      </section>
+      <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <h2 className="mb-1 text-sm font-semibold">Banco de plantillas</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Las plantillas importadas quedan como borradores y no se usan automáticamente hasta que un
+          docente las valide.
+        </p>
+        <input
+          className={fieldClass}
+          type="file"
+          accept="application/json,.json"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            try {
+              const count = await activityTemplateService.importBank(
+                activeModuleId,
+                JSON.parse(await file.text())
+              );
+              setTemplateMessage(
+                `${count} plantillas importadas como borradores pendientes de validación docente.`
+              );
+            } catch (cause) {
+              setTemplateMessage(
+                cause instanceof Error ? cause.message : 'No se pudo importar el banco.'
+              );
+            }
+          }}
+        />
+        {templateMessage && <p className="mt-2 text-xs text-muted-foreground">{templateMessage}</p>}
       </section>
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">

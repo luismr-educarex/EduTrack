@@ -169,6 +169,70 @@ export interface ParsedGradingGraph {
   rejections: { element: string; reason: string }[];
 }
 
+interface TemplateBankImport {
+  plantillas: {
+    id: string;
+    ce: string;
+    rol: ('fase' | 'hito' | 'refuerzo')[];
+    titulo: string;
+    rubrica: {
+      ce: string;
+      peso: number;
+      item: string;
+      niveles: { nivel: number; puntuacion: number; descriptor: string }[];
+    }[];
+    [field: string]: unknown;
+  }[];
+}
+
+export function parseTemplateBank(
+  input: unknown,
+  criteria: GradingCriterion[],
+  implications: CriterionImplication[]
+): ActivityTemplate[] {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !Array.isArray((input as TemplateBankImport).plantillas)
+  ) {
+    throw new Error('El contrato del banco de plantillas está incompleto.');
+  }
+  const roleMap = { fase: 'phase', hito: 'milestone', refuerzo: 'reinforcement' } as const;
+  const ids = new Set<string>();
+  return (input as TemplateBankImport).plantillas.map((raw) => {
+    if (
+      !raw.id ||
+      ids.has(raw.id) ||
+      !raw.ce ||
+      !Array.isArray(raw.rol) ||
+      !Array.isArray(raw.rubrica)
+    ) {
+      throw new Error(`Plantilla inválida o duplicada: ${raw.id || '(sin id)'}.`);
+    }
+    ids.add(raw.id);
+    const template: ActivityTemplate = {
+      id: raw.id,
+      criterionId: raw.ce,
+      roles: raw.rol.map((role) => roleMap[role]),
+      rubricItems: raw.rubrica.map((item) => ({
+        criterionId: item.ce,
+        description: item.item,
+        weight: item.peso,
+        levels: item.niveles.map((level) => ({
+          label: `Nivel ${level.nivel}`,
+          score: level.puntuacion,
+          descriptor: level.descriptor,
+        })),
+      })),
+      validated: false,
+      content: raw,
+    };
+    const validation = validateActivityTemplate(template, criteria, implications);
+    if (!validation.valid) throw new Error(`${raw.id}: ${validation.errors.join(' ')}`);
+    return template;
+  });
+}
+
 export function parseGradingGraph(input: unknown): ParsedGradingGraph {
   if (!input || typeof input !== 'object') throw new Error('El grafo debe ser un objeto JSON.');
   const graph = input as Partial<GradingGraphImport>;
@@ -399,6 +463,36 @@ export function topologicalOrder(
           queue.sort();
         }
       });
+  }
+  return order.length === nodes.length ? order : null;
+}
+
+export function inverseTopologicalOrder(
+  criterionIds: string[],
+  implications: CriterionImplication[]
+): string[] | null {
+  const nodes = [...new Set(criterionIds)].sort();
+  const edges = activeImplications(implications).filter(
+    (edge) => nodes.includes(edge.sourceCriterionId) && nodes.includes(edge.targetCriterionId)
+  );
+  const outdegree = new Map(nodes.map((id) => [id, 0]));
+  const predecessors = new Map(nodes.map((id) => [id, [] as string[]]));
+  edges.forEach((edge) => {
+    outdegree.set(edge.sourceCriterionId, (outdegree.get(edge.sourceCriterionId) ?? 0) + 1);
+    predecessors.get(edge.targetCriterionId)!.push(edge.sourceCriterionId);
+  });
+  const queue = nodes.filter((id) => outdegree.get(id) === 0).sort();
+  const order: string[] = [];
+  while (queue.length) {
+    const current = queue.shift()!;
+    order.push(current);
+    predecessors.get(current)!.forEach((source) => {
+      outdegree.set(source, outdegree.get(source)! - 1);
+      if (outdegree.get(source) === 0) {
+        queue.push(source);
+        queue.sort();
+      }
+    });
   }
   return order.length === nodes.length ? order : null;
 }
@@ -655,7 +749,7 @@ export function generateRecoveryPlan(
       reinforcements.set(raId, [...(reinforcements.get(raId) ?? []), component[0]]);
       return;
     }
-    const order = topologicalOrder(component, edges)?.reverse() ?? component;
+    const order = inverseTopologicalOrder(component, edges) ?? component;
     if (order.length <= maxPhases) {
       activities.push({
         class: 'itinerary',
@@ -666,22 +760,21 @@ export function generateRecoveryPlan(
       });
       return;
     }
-    const byRa = new Map<string, string[]>();
+    const sections: { raId: string; phases: string[] }[] = [];
     order.forEach((id) => {
       const raId = criteria.find((item) => item.id === id)?.raId ?? 'unknown';
-      byRa.set(raId, [...(byRa.get(raId) ?? []), id]);
+      const current = sections.at(-1);
+      if (current?.raId === raId) current.phases.push(id);
+      else sections.push({ raId, phases: [id] });
     });
-    byRa.forEach((phases, raId) => {
-      for (let index = 0; index < phases.length; index += maxPhases) {
-        const section = phases.slice(index, index + maxPhases);
-        activities.push({
-          class: 'section',
-          raId,
-          phases: section,
-          milestone: section.at(-1)!,
-          weight: planWeight(section, criteria, config),
-        });
-      }
+    sections.forEach(({ phases, raId }) => {
+      activities.push({
+        class: 'section',
+        raId,
+        phases,
+        milestone: phases.at(-1)!,
+        weight: planWeight(phases, criteria, config),
+      });
     });
   });
   reinforcements.forEach((phases, raId) =>

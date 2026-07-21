@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS public.criterion_evidence (
 );
 
 CREATE TABLE IF NOT EXISTS public.activity_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   module_id TEXT NOT NULL REFERENCES public.modules(id) ON DELETE CASCADE,
   criterion_id TEXT NOT NULL REFERENCES public.criteria(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
