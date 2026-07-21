@@ -20,7 +20,6 @@ import {
   Upload,
   GitBranch,
   Map,
-  Share2,
   ChevronDown,
   Activity,
   BookOpenText,
@@ -57,12 +56,6 @@ const NAV_ITEMS: NavItem[] = [
         label: 'Mapa de Evaluación',
         href: '/evaluation-map',
         icon: <Map size={16} />,
-      },
-      {
-        key: 'nav-ra-relations',
-        label: 'Relaciones entre RAs',
-        href: '/ra-relations',
-        icon: <Share2 size={16} />,
       },
       {
         key: 'nav-criterion-grading',
@@ -163,7 +156,6 @@ export default function Sidebar() {
   const planningChildPaths = [
     '/planning-curriculum',
     '/evaluation-map',
-    '/ra-relations',
     '/criterion-grading',
     '/cascade-statistics',
   ];

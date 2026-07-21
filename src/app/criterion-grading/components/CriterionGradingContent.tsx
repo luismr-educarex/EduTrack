@@ -6,6 +6,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import {
   criterionGradingConfigService,
+  criterionGraphImportService,
   criterionImplicationService,
   rubricItemGradeService,
   rubricItemService,
@@ -14,27 +15,34 @@ import {
   type RubricLevelDefinition,
 } from '@/lib/services/edutrackService';
 import {
-  aggregateCriterionEvidence,
+  aggregateConfiguredEvidence,
+  activityWeightFromRubric,
   applyAggregateCutoff,
   conditionalOutcomeGrade,
-  configuredCriterionWeight,
+  composeGlobalExam,
   deriveImplicitEvidence,
   directEvidenceForActivity,
+  generateRecoveryPlan,
   implicationClosure,
   rubricActivityGrade,
   rubricDiscordance,
+  validateRubricLevels,
   wouldCreateImplicationCycle,
   type CriterionEvidence,
 } from '@/lib/domain/criterionGrading';
 import { weightedAverage } from '@/lib/domain/calculations';
 
-type Tab = 'config' | 'implications' | 'rubrics' | 'grading';
+type Tab = 'config' | 'implications' | 'rubrics' | 'grading' | 'planning';
 
 const DEFAULT_LEVELS: RubricLevelDefinition[] = [
-  { label: 'Insuficiente', score: 3, descriptor: 'No alcanza el indicador' },
-  { label: 'Suficiente', score: 5, descriptor: 'Alcanza lo esencial' },
-  { label: 'Notable', score: 7.5, descriptor: 'Dominio adecuado' },
-  { label: 'Sobresaliente', score: 10, descriptor: 'Dominio excelente' },
+  { label: 'Insuficiente', score: 0, descriptor: 'No alcanza el indicador evaluado' },
+  { label: 'Suficiente', score: 5, descriptor: 'Alcanza los elementos esenciales' },
+  { label: 'Notable', score: 7.5, descriptor: 'Muestra un dominio adecuado y autónomo' },
+  {
+    label: 'Sobresaliente',
+    score: 10,
+    descriptor: 'Demuestra un dominio excelente, autónomo y transferible',
+  },
 ];
 
 const fieldClass =
@@ -75,6 +83,17 @@ function ConfigPanel() {
       </div>
       <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold">Ponderación y superación</h2>
+        <label className="mb-4 block max-w-xs space-y-1 text-xs font-medium">
+          <span>Curso académico</span>
+          <input
+            className={fieldClass}
+            value={form.academicYear ?? ''}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, academicYear: event.target.value }))
+            }
+            placeholder="2026-2027"
+          />
+        </label>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {numberField('basicWeight', 'Peso criterio básico')}
           {numberField('mediumWeight', 'Peso criterio medio')}
@@ -103,6 +122,24 @@ function ConfigPanel() {
             </select>
           </label>
           <label className="space-y-1 text-xs font-medium">
+            <span>Agregación en recuperación</span>
+            <select
+              className={fieldClass}
+              value={form.recoveryAggregationMode}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  recoveryAggregationMode: event.target
+                    .value as CriterionGradingConfig['recoveryAggregationMode'],
+                }))
+              }
+            >
+              <option value="latest">Última evidencia (recomendado)</option>
+              <option value="weighted_average">Media ponderada</option>
+              <option value="moving_average">Media móvil</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-medium">
             <span>Valor de evidencia implícita</span>
             <select
               className={fieldClass}
@@ -123,6 +160,16 @@ function ConfigPanel() {
       </section>
       <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold">Techos cuando falla un básico</h2>
+        <label className="mb-4 flex items-center gap-2 text-xs font-medium">
+          <input
+            type="checkbox"
+            checked={form.cutoffActive}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, cutoffActive: event.target.checked }))
+            }
+          />
+          Aplicar techos configurados
+        </label>
         <div className="grid gap-4 sm:grid-cols-3">
           {numberField('raCutoff', 'Resultado de aprendizaje')}
           {numberField('partialCutoff', 'Evaluación parcial')}
@@ -151,19 +198,24 @@ function ImplicationsPanel() {
   const [source, setSource] = useState('');
   const [target, setTarget] = useState('');
   const [justification, setJustification] = useState('');
+  const [level, setLevel] = useState<'H' | 'M' | 'I'>('M');
+  const [relationSource, setRelationSource] = useState('');
   const [error, setError] = useState('');
+  const [importMessage, setImportMessage] = useState('');
   const criterionLabel = (id: string) => criteria.find((item) => item.id === id)?.code ?? id;
   const save = async () => {
     setError('');
     if (!source || !target || !justification.trim())
       return setError('Selecciona origen y destino y documenta la cobertura total.');
-    if (wouldCreateImplicationCycle(criterionImplications, source, target))
+    if (wouldCreateImplicationCycle(criterionImplications, source, target, undefined, level))
       return setError('Esta arista crearía un ciclo en el grafo.');
     try {
       await criterionImplicationService.upsert({
         moduleId: activeModuleId,
         sourceCriterionId: source,
         targetCriterionId: target,
+        level,
+        source: relationSource.trim() || undefined,
         justification: justification.trim(),
       });
       await refreshCriterionGrading();
@@ -220,6 +272,29 @@ function ImplicationsPanel() {
             ))}
           </select>
         </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="space-y-1 text-xs font-medium">
+            <span>Nivel de la relación</span>
+            <select
+              className={fieldClass}
+              value={level}
+              onChange={(event) => setLevel(event.target.value as 'H' | 'M' | 'I')}
+            >
+              <option value="H">H · hereda la calificación</option>
+              <option value="M">M · acredita el mínimo</option>
+              <option value="I">I · solo documental</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-medium">
+            <span>Fuente</span>
+            <input
+              className={fieldClass}
+              value={relationSource}
+              onChange={(event) => setRelationSource(event.target.value)}
+              placeholder="Normativa, departamento…"
+            />
+          </label>
+        </div>
         <textarea
           className={fieldClass}
           rows={2}
@@ -233,6 +308,36 @@ function ImplicationsPanel() {
           Añadir arista
         </button>
       </section>
+      <section className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold">Importar grafo oficial</h2>
+        <p className="text-xs text-muted-foreground">
+          Admite el contrato grafo_0485_v2.json, valida referencias y ciclos H/M y puede repetirse
+          sin duplicar relaciones.
+        </p>
+        <input
+          className={fieldClass}
+          type="file"
+          accept="application/json,.json"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            setError('');
+            try {
+              const result = await criterionGraphImportService.import(
+                activeModuleId,
+                JSON.parse(await file.text())
+              );
+              await refreshCriterionGrading();
+              setImportMessage(
+                `${result.criteria} CE, ${result.implications} aristas y ${result.rejections} rechazos procesados.`
+              );
+            } catch (cause) {
+              setError(cause instanceof Error ? cause.message : 'No se pudo importar el grafo.');
+            }
+          }}
+        />
+        {importMessage && <p className="text-xs text-success">{importMessage}</p>}
+      </section>
       <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold">Grafo acíclico y cierre transitivo</h2>
         <div className="space-y-2">
@@ -244,10 +349,16 @@ function ImplicationsPanel() {
               <GitBranch size={15} className="mt-0.5 text-primary" />
               <div className="flex-1">
                 <p className="text-sm font-semibold">
+                  <span className="mr-2 rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                    {edge.level}
+                  </span>
                   {criterionLabel(edge.sourceCriterionId)} →{' '}
                   {criterionLabel(edge.targetCriterionId)}
                 </p>
-                <p className="text-xs text-muted-foreground">{edge.justification}</p>
+                <p className="text-xs text-muted-foreground">
+                  {edge.justification}
+                  {edge.source ? ` · Fuente: ${edge.source}` : ''}
+                </p>
                 <p className="mt-1 text-[10px] text-primary">
                   Cierre:{' '}
                   {implicationClosure(edge.sourceCriterionId, criterionImplications)
@@ -284,6 +395,7 @@ function RubricsPanel() {
   const [weight, setWeight] = useState(1);
   const [levels, setLevels] = useState<RubricLevelDefinition[]>(DEFAULT_LEVELS);
   const [editingId, setEditingId] = useState<string>();
+  const [validationError, setValidationError] = useState('');
   const activity = activities.find((item) => item.id === activityId);
   const items = rubricItems.filter((item) => item.activityId === activityId);
   const availableCriteria = criteria.filter((item) => activity?.ceIds.includes(item.id));
@@ -296,6 +408,12 @@ function RubricsPanel() {
   };
   const save = async () => {
     if (!activityId || !criterionId || !description.trim() || weight <= 0) return;
+    const validation = validateRubricLevels(levels);
+    if (!validation.valid) {
+      setValidationError(validation.errors.join(' '));
+      return;
+    }
+    setValidationError('');
     await rubricItemService.upsert({
       id: editingId,
       activityId,
@@ -413,6 +531,7 @@ function RubricsPanel() {
             </div>
           ))}
         </div>
+        {validationError && <p className="text-xs text-danger">{validationError}</p>}
         <button className={buttonClass} onClick={save}>
           <Save size={15} />
           {editingId ? 'Guardar ítem' : 'Añadir ítem'}
@@ -488,26 +607,22 @@ function GradingPanel() {
     (item) => item.studentId === studentId && items.some((rubric) => rubric.id === item.itemId)
   );
   const activity = activities.find((item) => item.id === activityId);
-  const activityWeight =
-    activity?.ceIds.reduce((sum, id) => {
-      const ce = criteria.find((item) => item.id === id);
-      return sum + (ce ? configuredCriterionWeight(ce.difficulty, config) : 0);
-    }, 0) ?? 0;
+  const activityWeight = activity
+    ? activityWeightFromRubric(activity.id, rubricItems, criteria, config)
+    : 0;
   const allEvidence = useMemo(() => {
     const evidence: CriterionEvidence[] = [];
     [...activities]
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
       .forEach((current) => {
         const currentItems = rubricItems.filter((item) => item.activityId === current.id);
-        const currentWeight = current.ceIds.reduce((sum, id) => {
-          const ce = criteria.find((item) => item.id === id);
-          return sum + (ce ? configuredCriterionWeight(ce.difficulty, config) : 0);
-        }, 0);
+        const currentWeight = activityWeightFromRubric(current.id, rubricItems, criteria, config);
         const direct = directEvidenceForActivity(
           current.id,
           currentWeight,
           currentItems,
-          rubricItemGrades.filter((item) => item.studentId === studentId)
+          rubricItemGrades.filter((item) => item.studentId === studentId),
+          current.isRecovery ?? false
         );
         evidence.push(
           ...direct,
@@ -530,7 +645,7 @@ function GradingPanel() {
   const globalGrade = rubricActivityGrade(items, grades);
   const discordant = rubricDiscordance(globalGrade, direct, config.passingThreshold);
   const aggregateSummaries = useMemo(() => {
-    const summarize = (raIds: string[], cutoff: number) => {
+    const summarize = (raIds: string[], cutoff: number, effect: 'orientative' | 'academic') => {
       const outcomes = raIds.map((raId) => {
         const raCriteria = criteria.filter((criterion) => criterion.raId === raId);
         return {
@@ -550,7 +665,9 @@ function GradingPanel() {
       return applyAggregateCutoff(
         raw,
         outcomes.flatMap((outcome) => outcome.result.blockedBy),
-        cutoff
+        cutoff,
+        config.cutoffActive,
+        effect
       );
     };
     const partials = evaluations.map((evaluation) => {
@@ -564,13 +681,14 @@ function GradingPanel() {
           criteria.filter((criterion) => ceIds.has(criterion.id)).map((criterion) => criterion.raId)
         ),
       ];
-      return { evaluation, result: summarize(raIds, config.partialCutoff) };
+      return { evaluation, result: summarize(raIds, config.partialCutoff, 'orientative') };
     });
     return {
       partials,
       final: summarize(
         learningOutcomes.map((ra) => ra.id),
-        config.finalCutoff
+        config.finalCutoff,
+        'academic'
       ),
     };
   }, [activities, allEvidence, config, criteria, evaluations, learningOutcomes]);
@@ -745,9 +863,9 @@ function GradingPanel() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {raCriteria.map((ce) => {
-                        const value = aggregateCriterionEvidence(
+                        const value = aggregateConfiguredEvidence(
                           allEvidence.filter((e) => e.criterionId === ce.id),
-                          config.aggregationMode
+                          config
                         );
                         const implicit = allEvidence.some(
                           (e) => e.criterionId === ce.id && e.type === 'implicit'
@@ -773,6 +891,109 @@ function GradingPanel() {
   );
 }
 
+function PlanningPanel() {
+  const { criteria, criterionImplications, criterionGradingConfig: config } = useEduTrack();
+  const [pending, setPending] = useState<string[]>(criteria.map((item) => item.id));
+  const domainCriteria = criteria.map((item) => ({
+    id: item.id,
+    raId: item.raId,
+    difficulty: item.difficulty,
+  }));
+  const exam = useMemo(
+    () => composeGlobalExam(pending, domainCriteria, criterionImplications, config),
+    [pending, domainCriteria, criterionImplications, config]
+  );
+  const plan = useMemo(
+    () => generateRecoveryPlan(pending, domainCriteria, criterionImplications, config),
+    [pending, domainCriteria, criterionImplications, config]
+  );
+  const label = (id: string) => criteria.find((item) => item.id === id)?.code ?? id;
+  return (
+    <div className="space-y-5">
+      <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Criterios pendientes</h2>
+            <p className="text-xs text-muted-foreground">
+              Selecciona el estado del alumno para generar ambos instrumentos con el mismo conjunto.
+            </p>
+          </div>
+          <button
+            className="text-xs text-primary"
+            onClick={() => setPending(pending.length ? [] : criteria.map((item) => item.id))}
+          >
+            {pending.length ? 'Limpiar' : 'Seleccionar todos'}
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {criteria.map((criterion) => (
+            <label
+              key={criterion.id}
+              className="flex items-center gap-1 rounded border border-border px-2 py-1 text-xs"
+            >
+              <input
+                type="checkbox"
+                checked={pending.includes(criterion.id)}
+                onChange={() =>
+                  setPending((current) =>
+                    current.includes(criterion.id)
+                      ? current.filter((id) => id !== criterion.id)
+                      : [...current, criterion.id]
+                  )
+                }
+              />
+              {criterion.code}
+            </label>
+          ))}
+        </div>
+      </section>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold">
+            Examen globalizador · {exam.exercises.length} ejercicios
+          </h2>
+          <div className="space-y-2">
+            {exam.exercises.map((exercise, index) => (
+              <div
+                key={`${exercise.criterionId}-${index}`}
+                className="rounded-lg border border-border p-3 text-xs"
+              >
+                <p className="font-semibold">
+                  {index + 1}. {label(exercise.criterionId)} · {exercise.character}
+                </p>
+                <p className="text-muted-foreground">
+                  Cubre: {exercise.covers.map(label).join(', ')} · peso {exercise.weight}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-semibold">
+            Plan de recuperación · {plan.length} actividades
+          </h2>
+          <div className="space-y-2">
+            {plan.map((activity, index) => (
+              <div
+                key={`${activity.class}-${index}`}
+                className="rounded-lg border border-border p-3 text-xs"
+              >
+                <p className="font-semibold">
+                  {index + 1}. {activity.class} {activity.raId ? `· ${activity.raId}` : ''}
+                </p>
+                <p className="text-muted-foreground">
+                  Fases: {activity.phases.map(label).join(' → ')}
+                  {activity.milestone ? ` · hito ${label(activity.milestone)}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export default function CriterionGradingContent() {
   const { loading, error } = useEduTrack();
   const [tab, setTab] = useState<Tab>('config');
@@ -781,6 +1002,7 @@ export default function CriterionGradingContent() {
     { id: 'implications', label: 'Implicaciones CE' },
     { id: 'rubrics', label: 'Rúbricas' },
     { id: 'grading', label: 'Calificar y evidencias' },
+    { id: 'planning', label: 'Examen y recuperación' },
   ];
   if (loading)
     return <div className="p-8 text-sm text-muted-foreground">Cargando sistema criterial…</div>;
@@ -812,6 +1034,7 @@ export default function CriterionGradingContent() {
         {tab === 'implications' && <ImplicationsPanel />}
         {tab === 'rubrics' && <RubricsPanel />}
         {tab === 'grading' && <GradingPanel />}
+        {tab === 'planning' && <PlanningPanel />}
       </div>
     </div>
   );
