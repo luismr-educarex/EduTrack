@@ -178,6 +178,55 @@ export interface GradingScale {
   latePenalty: number;
 }
 
+export type AggregationMode = 'weighted_average' | 'latest' | 'moving_average';
+export type ImplicationMode = 'disabled' | 'minimum' | 'inherit';
+
+export interface CriterionGradingConfig {
+  moduleId: string;
+  basicWeight: number;
+  mediumWeight: number;
+  advancedWeight: number;
+  passingThreshold: number;
+  aggregationMode: AggregationMode;
+  implicationMode: ImplicationMode;
+  raCutoff: number;
+  partialCutoff: number;
+  finalCutoff: number;
+}
+
+export interface CriterionImplication {
+  id: string;
+  moduleId: string;
+  sourceCriterionId: string;
+  targetCriterionId: string;
+  justification: string;
+}
+
+export interface RubricLevelDefinition {
+  label: string;
+  score: number;
+  descriptor: string;
+}
+
+export interface RubricItem {
+  id: string;
+  activityId: string;
+  criterionId: string;
+  description: string;
+  weight: number;
+  levels: RubricLevelDefinition[];
+  sortOrder: number;
+}
+
+export interface RubricItemGrade {
+  id: string;
+  studentId: string;
+  itemId: string;
+  score: number | null;
+  notApplicable: boolean;
+  gradedAt: string;
+}
+
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 function isSchemaError(error: any): boolean {
   if (!error) return false;
@@ -514,6 +563,118 @@ export const raRelationshipService = {
       const { error } = await supabase.from('ra_relationships').delete().eq('id', id);
       if (error) { if (isSchemaError(error)) throw error; }
     } catch (e: any) { console.error('raRelationshipService.delete:', e.message); throw e; }
+  },
+};
+
+// ─── CRITERION-BASED GRADING ─────────────────────────────────────────────────
+export const criterionGradingConfigService = {
+  async getByModule(moduleId: string): Promise<CriterionGradingConfig | null> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('criterion_grading_configs').select('*').eq('module_id', moduleId).maybeSingle();
+    if (error) return null;
+    return data ? {
+      moduleId: data.module_id, basicWeight: Number(data.basic_weight), mediumWeight: Number(data.medium_weight),
+      advancedWeight: Number(data.advanced_weight), passingThreshold: Number(data.passing_threshold),
+      aggregationMode: data.aggregation_mode, implicationMode: data.implication_mode,
+      raCutoff: Number(data.ra_cutoff), partialCutoff: Number(data.partial_cutoff), finalCutoff: Number(data.final_cutoff),
+    } : null;
+  },
+
+  async upsert(config: CriterionGradingConfig): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('criterion_grading_configs').upsert({
+      module_id: config.moduleId, basic_weight: config.basicWeight, medium_weight: config.mediumWeight,
+      advanced_weight: config.advancedWeight, passing_threshold: config.passingThreshold,
+      aggregation_mode: config.aggregationMode, implication_mode: config.implicationMode,
+      ra_cutoff: config.raCutoff, partial_cutoff: config.partialCutoff, final_cutoff: config.finalCutoff,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'module_id' });
+    if (error) throw error;
+  },
+};
+
+export const criterionImplicationService = {
+  async getByModule(moduleId: string): Promise<CriterionImplication[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase.from('criterion_implications').select('*').eq('module_id', moduleId).order('created_at');
+    if (error) return [];
+    return (data || []).map(row => ({
+      id: row.id, moduleId: row.module_id, sourceCriterionId: row.source_criterion_id,
+      targetCriterionId: row.target_criterion_id, justification: row.justification,
+    }));
+  },
+
+  async upsert(implication: Omit<CriterionImplication, 'id'> & { id?: string }): Promise<void> {
+    const supabase = createClient();
+    const payload: Record<string, unknown> = {
+      module_id: implication.moduleId, source_criterion_id: implication.sourceCriterionId,
+      target_criterion_id: implication.targetCriterionId, justification: implication.justification,
+    };
+    if (implication.id) payload.id = implication.id;
+    const { error } = await supabase.from('criterion_implications').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('criterion_implications').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const rubricItemService = {
+  async getByModule(moduleId: string): Promise<RubricItem[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('rubric_items').select('*, activities!inner(module_id)')
+      .eq('activities.module_id', moduleId).order('sort_order');
+    if (error) return [];
+    return (data || []).map(row => ({
+      id: row.id, activityId: row.activity_id, criterionId: row.criterion_id,
+      description: row.description, weight: Number(row.item_weight), levels: row.levels || [], sortOrder: row.sort_order,
+    }));
+  },
+
+  async upsert(item: Omit<RubricItem, 'id'> & { id?: string }): Promise<void> {
+    const supabase = createClient();
+    const payload: Record<string, unknown> = {
+      activity_id: item.activityId, criterion_id: item.criterionId, description: item.description,
+      item_weight: item.weight, levels: item.levels, sort_order: item.sortOrder, updated_at: new Date().toISOString(),
+    };
+    if (item.id) payload.id = item.id;
+    const { error } = await supabase.from('rubric_items').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('rubric_items').delete().eq('id', id);
+    if (error) throw error;
+  },
+};
+
+export const rubricItemGradeService = {
+  async getByModule(moduleId: string): Promise<RubricItemGrade[]> {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('rubric_item_grades')
+      .select('*, rubric_items!inner(activities!inner(module_id))')
+      .eq('rubric_items.activities.module_id', moduleId);
+    if (error) return [];
+    return (data || []).map(row => ({
+      id: row.id, studentId: row.student_id, itemId: row.item_id,
+      score: row.score === null ? null : Number(row.score), notApplicable: row.not_applicable, gradedAt: row.graded_at,
+    }));
+  },
+
+  async upsert(studentId: string, itemId: string, score: number | null, notApplicable: boolean): Promise<void> {
+    const supabase = createClient();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('rubric_item_grades').upsert({
+      student_id: studentId, item_id: itemId, score: notApplicable ? null : score,
+      not_applicable: notApplicable, graded_at: now, updated_at: now,
+    }, { onConflict: 'student_id,item_id' });
+    if (error) throw error;
   },
 };
 

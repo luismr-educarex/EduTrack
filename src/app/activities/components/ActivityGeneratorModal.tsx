@@ -138,9 +138,9 @@ CRITERIOS DE EVALUACIÓN SELECCIONADOS (estos criterios deben guiar el enunciado
 ${ceDetails}
 
 SISTEMA DE PUNTUACIÓN POR NIVEL DE DIFICULTAD:
-- Básico = 1 punto (conceptos fundamentales, identificación, comprensión)
+- Básico = 3 puntos (aprendizajes imprescindibles y mínimos exigibles)
 - Medio = 2 puntos (aplicación práctica, implementación guiada)
-- Avanzado = 3 puntos (desarrollo autónomo, integración compleja, optimización)
+- Avanzado = 1 punto (desempeño experto, transferencia y diseño)
 
 DISTRIBUCIÓN DE PUNTOS: ${ceWeightInfo}
 PUNTOS TOTALES DE LA ACTIVIDAD: ${totalW}
