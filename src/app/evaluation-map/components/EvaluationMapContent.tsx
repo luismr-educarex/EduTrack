@@ -350,7 +350,7 @@ export default function EvaluationMapContent() {
             Estos pesos determinan cuánto vale cada UT/RA en la nota final de ese momento.
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            El botón <strong>Recalcular</strong> redistribuye automáticamente los pesos en función de los <strong>Criterios de Evaluación (CE)</strong> y sus puntos de dificultad (Básico=1, Medio=2, Avanzado=3) asignados a las actividades de cada UT/RA.
+            El botón <strong>Recalcular</strong> redistribuye automáticamente los pesos en función de los <strong>Criterios de Evaluación (CE)</strong> y la ponderación configurada para criterios básicos, medios y avanzados asignados a las actividades de cada UT/RA.
           </p>
           <p className="text-xs text-muted-foreground">
             Los momentos <span className="text-info font-medium">azules</span> son evaluaciones parciales, los <span className="text-primary font-medium">morados</span> son notas de módulo acumuladas y los <span className="text-success font-medium">verdes</span> son convocatorias finales.

@@ -1,0 +1,284 @@
+{
+  "banco": "Plantillas de actividad por criterio de evaluación",
+  "modulo": { "codigo": "0485", "nombre": "Programación", "fuente": "RD 405/2023" },
+  "version": 1,
+  "proposito": "F3 de la hoja de ruta del generador de actividades personalizadas: para cada CE, una o más plantillas parametrizables que el generador instancia al componer itinerarios, tramos y refuerzos. La plantilla es el contenido; el orden y la agrupación los pone el grafo v2.",
+
+  "esquema": {
+    "id": "Identificador único de la plantilla (ce + correlativo, p. ej. 3a-01)",
+    "ce": "Criterio de evaluación que trabaja como objetivo principal",
+    "rol": "Papel que puede desempeñar en el plan: fase (trabaja un CE dentro de un itinerario), hito (reto integrador que cierra tramo o itinerario, con rúbrica desglosada) o refuerzo (ítem directo autónomo). Una plantilla puede admitir varios roles.",
+    "titulo": "Título con parámetros {{...}} que el generador o el docente sustituye",
+    "contextos": "Dominios de ambientación disponibles para {{dominio}} y sus entidades; permiten variar la actividad entre alumnos o convocatorias sin cambiar la exigencia",
+    "parametros": "Variables de la plantilla: nombre, descripción y valores posibles o ejemplo. La dificultad NUNCA es un parámetro: la fija el CE y su tipo",
+    "enunciado": "Texto del enunciado con los parámetros marcados. Debe exigir exactamente la competencia del CE: ni más (contaminaría la evidencia) ni menos (no acreditaría)",
+    "entregables": "Qué entrega el alumno (ficheros, capturas, respuestas)",
+    "rubrica": "Ítems de corrección. Cada ítem: ce al que evidencia, peso, y niveles de logro con descriptor observable y puntuación 0-10. En las plantillas de rol hito, la rúbrica DEBE desglosar ítems directos para los CE básicos que el hito acredita por implicación: es la red de seguridad del sistema",
+    "duracion_min": "Duración estimada en minutos, para el dimensionado del plan",
+    "moodle": "Tipo de implantación como reto en la cadena con desbloqueo condicionado (tarea, cuestionario, taller)",
+    "instrucciones_ia": "Guía para la redacción asistida (F4): qué puede variar la IA al instanciar y qué es intocable. Toda instancia generada exige validación docente antes de publicarse",
+    "notas_docente": "Avisos de aplicación y errores frecuentes del alumnado"
+  },
+
+  "contextos_comunes": {
+    "biblioteca": {
+      "entidad": "Libro",
+      "atributos": ["titulo", "autor", "paginas", "prestado"],
+      "coleccion": "catálogo"
+    },
+    "banca": {
+      "entidad": "CuentaBancaria",
+      "atributos": ["iban", "titular", "saldo", "activa"],
+      "coleccion": "cartera de cuentas"
+    },
+    "tienda": {
+      "entidad": "Producto",
+      "atributos": ["nombre", "precio", "stock", "descatalogado"],
+      "coleccion": "inventario"
+    },
+    "club": {
+      "entidad": "Socio",
+      "atributos": ["numero", "nombre", "cuotaPagada", "antiguedad"],
+      "coleccion": "registro de socios"
+    }
+  },
+
+  "plantillas": [
+    {
+      "id": "3a-01",
+      "ce": "3a",
+      "rol": ["fase", "refuerzo"],
+      "titulo": "Clasificador de {{entidad}}: reglas de decisión",
+      "contextos": ["biblioteca", "banca", "tienda", "club"],
+      "parametros": [
+        {
+          "nombre": "dominio",
+          "descripcion": "Contexto de ambientación",
+          "valores": "uno de contextos_comunes"
+        },
+        {
+          "nombre": "reglas",
+          "descripcion": "Tres reglas de negocio encadenadas sobre los atributos de la entidad",
+          "ejemplo": "en banca: saldo negativo → 'descubierto'; saldo < 1000 → 'básica'; resto → 'preferente', con recargo si la cuenta no está activa"
+        }
+      ],
+      "enunciado": "Escribe un programa que lea por teclado los datos de un/a {{entidad}} y muestre su clasificación aplicando estas reglas: {{reglas}}. Debes resolverlo con if/else if/else y, en una segunda versión del mismo método, con switch cuando la regla lo permita. Prueba el programa con un caso de cada rama y anota en un comentario qué entrada activa cada una.",
+      "entregables": [
+        "Fichero fuente con las dos versiones",
+        "Comentario por rama con la entrada que la activa"
+      ],
+      "rubrica": [
+        {
+          "ce": "3a",
+          "peso": 2,
+          "item": "Las estructuras de selección implementan correctamente las reglas y cubren todas las ramas",
+          "niveles": [
+            {
+              "nivel": 0,
+              "puntuacion": 0,
+              "descriptor": "No usa selección o las reglas no se corresponden con el enunciado"
+            },
+            {
+              "nivel": 1,
+              "puntuacion": 4,
+              "descriptor": "Selección presente pero con ramas ausentes o condiciones incorrectas"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 6,
+              "descriptor": "Reglas correctas con condiciones redundantes o mal ordenadas"
+            },
+            {
+              "nivel": 3,
+              "puntuacion": 10,
+              "descriptor": "Reglas correctas, ramas completas, condiciones limpias y bien ordenadas; versión switch adecuada"
+            }
+          ]
+        },
+        {
+          "ce": "3a",
+          "peso": 1,
+          "item": "Las pruebas por rama demuestran que el código se ha ejecutado y verificado",
+          "niveles": [
+            { "nivel": 0, "puntuacion": 0, "descriptor": "Sin pruebas" },
+            {
+              "nivel": 1,
+              "puntuacion": 5,
+              "descriptor": "Pruebas parciales: quedan ramas sin caso"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 10,
+              "descriptor": "Un caso por rama, anotado y coherente con la salida"
+            }
+          ]
+        }
+      ],
+      "duracion_min": 45,
+      "moodle": "tarea con entrega de fichero; autocorrección parcial posible con juego de pruebas",
+      "instrucciones_ia": "Puede variar: dominio, redacción de las reglas y valores umbral. Intocable: exactamente tres reglas encadenadas, doble versión if/switch, exigencia de un caso de prueba por rama.",
+      "notas_docente": "Error frecuente: condiciones solapadas que hacen inalcanzable una rama; el descriptor del nivel 2 lo captura sin suspender."
+    },
+
+    {
+      "id": "3e-01",
+      "ce": "3e",
+      "rol": ["hito"],
+      "titulo": "Reto de consolidación: gestor de {{coleccion}} en consola",
+      "contextos": ["biblioteca", "banca", "tienda", "club"],
+      "parametros": [
+        {
+          "nombre": "dominio",
+          "descripcion": "Contexto de ambientación",
+          "valores": "uno de contextos_comunes"
+        },
+        {
+          "nombre": "operaciones",
+          "descripcion": "Cuatro operaciones del menú",
+          "ejemplo": "alta, listado, búsqueda por atributo, estadística simple (máximo/media)"
+        }
+      ],
+      "enunciado": "Construye un programa de consola con un menú repetitivo que gestione el/la {{coleccion}} (almacenamiento en array): {{operaciones}} y salir. El menú se repite hasta la opción de salida, valida la opción introducida, y cada operación combina las estructuras que necesite (selección para validar y decidir, repetición para recorrer). Entrega el programa probado: incluye una sesión de ejecución completa que pase por todas las opciones.",
+      "entregables": ["Fichero fuente", "Transcripción de una sesión completa de ejecución"],
+      "rubrica": [
+        {
+          "ce": "3a",
+          "peso": 2,
+          "item": "DESGLOSE BÁSICO — Selección: validación de opciones y decisiones internas de cada operación correctas",
+          "niveles": [
+            { "nivel": 0, "puntuacion": 0, "descriptor": "Sin validación ni decisiones correctas" },
+            {
+              "nivel": 1,
+              "puntuacion": 5,
+              "descriptor": "Decisiones correctas con validación incompleta"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 10,
+              "descriptor": "Validación y decisiones completas y correctas"
+            }
+          ]
+        },
+        {
+          "ce": "3b",
+          "peso": 2,
+          "item": "DESGLOSE BÁSICO — Repetición: bucle de menú y recorridos del array correctos y sin desbordes",
+          "niveles": [
+            { "nivel": 0, "puntuacion": 0, "descriptor": "Bucles incorrectos o desbordes" },
+            {
+              "nivel": 1,
+              "puntuacion": 5,
+              "descriptor": "Funcionan con casos límite mal resueltos"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 10,
+              "descriptor": "Bucles correctos, incluidos los casos límite"
+            }
+          ]
+        },
+        {
+          "ce": "3e",
+          "peso": 3,
+          "item": "Integración: el programa completo combina las estructuras con coherencia y cumple las cuatro operaciones",
+          "niveles": [
+            {
+              "nivel": 0,
+              "puntuacion": 0,
+              "descriptor": "El programa no ejecuta el ciclo completo"
+            },
+            { "nivel": 1, "puntuacion": 4, "descriptor": "Ejecuta con operaciones incompletas" },
+            {
+              "nivel": 2,
+              "puntuacion": 7,
+              "descriptor": "Las cuatro operaciones funcionan con defectos menores"
+            },
+            {
+              "nivel": 3,
+              "puntuacion": 10,
+              "descriptor": "Ciclo completo, operaciones correctas, estructura clara"
+            }
+          ]
+        }
+      ],
+      "duracion_min": 120,
+      "moodle": "tarea-hito: su superación desbloquea el tramo siguiente de la cadena",
+      "instrucciones_ia": "Puede variar: dominio y las cuatro operaciones (manteniendo una de recorrido, una de búsqueda y una estadística). Intocable: menú repetitivo con validación, almacenamiento en array, sesión de ejecución completa, y el desglose de rúbrica con ítems directos para 3a y 3b.",
+      "notas_docente": "Es el hito que acredita 3a y 3b por implicación; el desglose de la rúbrica los evidencia directamente, que es la red de seguridad si el conjunto falla. La transcripción de sesión es la evidencia de 'probado' sin corrección en vivo."
+    },
+
+    {
+      "id": "4g-01",
+      "ce": "4g",
+      "rol": ["fase"],
+      "titulo": "Especialización de {{entidad}}: herencia con sentido",
+      "contextos": ["biblioteca", "banca", "tienda", "club"],
+      "parametros": [
+        {
+          "nombre": "dominio",
+          "descripcion": "Contexto de ambientación",
+          "valores": "uno de contextos_comunes"
+        },
+        {
+          "nombre": "subclases",
+          "descripcion": "Dos especializaciones con al menos un atributo y un comportamiento propios cada una",
+          "ejemplo": "en biblioteca: LibroDigital (formato, tamañoMb; abrir()) y LibroPrestable (fechaDevolucion; renovar())"
+        }
+      ],
+      "enunciado": "Partiendo de la clase {{entidad}} (se te proporciona), define las subclases {{subclases}}. Cada subclase añade sus atributos con su constructor encadenado al de la superclase, y su comportamiento propio. Escribe un programa que cree un array de {{entidad}} con objetos de ambas subclases y lo recorra mostrando la información de cada uno. Explica en un comentario de cabecera qué aporta aquí la herencia frente a duplicar la clase.",
+      "entregables": [
+        "Ficheros fuente de las subclases y del programa",
+        "Comentario de justificación de la herencia"
+      ],
+      "rubrica": [
+        {
+          "ce": "4g",
+          "peso": 3,
+          "item": "Las subclases extienden correctamente la superclase: constructores encadenados, miembros propios, uso polimórfico en el array",
+          "niveles": [
+            { "nivel": 0, "puntuacion": 0, "descriptor": "No hay herencia efectiva o no compila" },
+            {
+              "nivel": 1,
+              "puntuacion": 4,
+              "descriptor": "Herencia declarada con constructores mal encadenados o miembros duplicados"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 7,
+              "descriptor": "Herencia correcta con uso polimórfico parcial"
+            },
+            {
+              "nivel": 3,
+              "puntuacion": 10,
+              "descriptor": "Herencia correcta, sin duplicación, array polimórfico recorrido con naturalidad"
+            }
+          ]
+        },
+        {
+          "ce": "4g",
+          "peso": 1,
+          "item": "La justificación explica el valor de la herencia en este caso con argumentos del propio código",
+          "niveles": [
+            { "nivel": 0, "puntuacion": 0, "descriptor": "Sin justificación o genérica" },
+            {
+              "nivel": 1,
+              "puntuacion": 5,
+              "descriptor": "Justificación correcta pero desligada del código entregado"
+            },
+            {
+              "nivel": 2,
+              "puntuacion": 10,
+              "descriptor": "Justificación anclada en el código: qué se reutiliza y qué se especializa"
+            }
+          ]
+        }
+      ],
+      "duracion_min": 90,
+      "moodle": "tarea con entrega de ficheros",
+      "instrucciones_ia": "Puede variar: dominio y las dos especializaciones (siempre con atributo y comportamiento propios). Intocable: superclase dada (no se rediseña), constructores encadenados, array polimórfico, justificación anclada al código.",
+      "notas_docente": "4g es antesala del itinerario de RA7 (4g→7d→7e): esta plantilla deja el array polimórfico ya montado, que es exactamente el punto de partida de la sobrescritura en 7d."
+    }
+  ],
+
+  "cobertura_pendiente": "El banco completo requiere al menos una plantilla por cada uno de los 79 CE, priorizando: (1) los 40 CE de evidencia directa obligatoria del grafo v2, que ningún hito puede acreditar; (2) los hitos de tramo detectados por el generador (1h, 2h, 3h, 4i, 5h, 6i, 7g, 8h, 9g), que necesitan plantillas de rol hito con desglose; (3) el resto, que puede acreditarse por implicación y admite espera."
+}

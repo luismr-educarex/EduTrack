@@ -2,14 +2,43 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
-  moduleService, evaluationService, learningOutcomeService, criterionService,
-  workUnitService, activityService, studentService, gradeService,
-  raRelationshipService, incidentService, sessionLogService, tutoringService,
+  moduleService,
+  evaluationService,
+  learningOutcomeService,
+  criterionService,
+  workUnitService,
+  activityService,
+  studentService,
+  gradeService,
+  raRelationshipService,
+  incidentService,
+  sessionLogService,
+  tutoringService,
   calendarEventService,
   foundationService,
-  Module, Evaluation, LearningOutcome, Criterion, WorkUnit, Activity,
-  Student, ActivityGrade, RARelationship, Incident, SessionLog, TutoringAction, CalendarEvent,
+  criterionGradingConfigService,
+  criterionImplicationService,
+  rubricItemService,
+  rubricItemGradeService,
+  Module,
+  Evaluation,
+  LearningOutcome,
+  Criterion,
+  WorkUnit,
+  Activity,
+  Student,
+  ActivityGrade,
+  RARelationship,
+  Incident,
+  SessionLog,
+  TutoringAction,
+  CalendarEvent,
+  CriterionGradingConfig,
+  CriterionImplication,
+  RubricItem,
+  RubricItemGrade,
 } from '@/lib/services/edutrackService';
+import { DEFAULT_CRITERION_GRADING_CONFIG } from '@/lib/domain/criterionGrading';
 import { configureAcademicCalculations } from '@/lib/mockData';
 
 const ACTIVE_MODULE_ID = 'module-ruslvg5ye';
@@ -33,6 +62,10 @@ interface EduTrackData {
   sessionLogs: SessionLog[];
   tutoringActions: TutoringAction[];
   calendarEvents: CalendarEvent[];
+  criterionGradingConfig: CriterionGradingConfig;
+  criterionImplications: CriterionImplication[];
+  rubricItems: RubricItem[];
+  rubricItemGrades: RubricItemGrade[];
   // Mutators
   refreshActivities: () => Promise<void>;
   refreshStudents: () => Promise<void>;
@@ -45,20 +78,44 @@ interface EduTrackData {
   refreshLearningOutcomes: () => Promise<void>;
   refreshCriteria: () => Promise<void>;
   refreshWorkUnits: () => Promise<void>;
+  refreshCriterionGrading: () => Promise<void>;
 }
 
 const EduTrackContext = createContext<EduTrackData>({
-  loading: true, error: null, activeModule: null, activeModuleId: ACTIVE_MODULE_ID,
-  setActiveModuleId: () => {}, modules: [], evaluations: [],
-  learningOutcomes: [], criteria: [], workUnits: [], activities: [], students: [],
-  grades: [], raRelationships: [], incidents: [], sessionLogs: [], tutoringActions: [],
+  loading: true,
+  error: null,
+  activeModule: null,
+  activeModuleId: ACTIVE_MODULE_ID,
+  setActiveModuleId: () => {},
+  modules: [],
+  evaluations: [],
+  learningOutcomes: [],
+  criteria: [],
+  workUnits: [],
+  activities: [],
+  students: [],
+  grades: [],
+  raRelationships: [],
+  incidents: [],
+  sessionLogs: [],
+  tutoringActions: [],
   calendarEvents: [],
-  refreshActivities: async () => {}, refreshStudents: async () => {},
-  refreshGrades: async () => {}, refreshIncidents: async () => {},
-  refreshSessionLogs: async () => {}, refreshTutoringActions: async () => {},
-  refreshCalendarEvents: async () => {}, refreshRARelationships: async () => {},
-  refreshLearningOutcomes: async () => {}, refreshCriteria: async () => {},
+  criterionGradingConfig: { moduleId: ACTIVE_MODULE_ID, ...DEFAULT_CRITERION_GRADING_CONFIG },
+  criterionImplications: [],
+  rubricItems: [],
+  rubricItemGrades: [],
+  refreshActivities: async () => {},
+  refreshStudents: async () => {},
+  refreshGrades: async () => {},
+  refreshIncidents: async () => {},
+  refreshSessionLogs: async () => {},
+  refreshTutoringActions: async () => {},
+  refreshCalendarEvents: async () => {},
+  refreshRARelationships: async () => {},
+  refreshLearningOutcomes: async () => {},
+  refreshCriteria: async () => {},
   refreshWorkUnits: async () => {},
+  refreshCriterionGrading: async () => {},
 });
 
 export const useEduTrack = () => useContext(EduTrackContext);
@@ -80,12 +137,39 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
   const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
   const [tutoringActions, setTutoringActions] = useState<TutoringAction[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [criterionGradingConfig, setCriterionGradingConfig] = useState<CriterionGradingConfig>({
+    moduleId: ACTIVE_MODULE_ID,
+    ...DEFAULT_CRITERION_GRADING_CONFIG,
+  });
+  const [criterionImplications, setCriterionImplications] = useState<CriterionImplication[]>([]);
+  const [rubricItems, setRubricItems] = useState<RubricItem[]>([]);
+  const [rubricItemGrades, setRubricItemGrades] = useState<RubricItemGrade[]>([]);
 
   useEffect(() => {
-    configureAcademicCalculations({ activities, criteria, grades, evaluations, workUnits });
-  }, [activities, criteria, grades, evaluations, workUnits]);
+    configureAcademicCalculations({
+      activities,
+      criteria,
+      grades,
+      evaluations,
+      workUnits,
+      rubricItems,
+      rubricItemGrades,
+      criterionImplications,
+      criterionGradingConfig,
+    });
+  }, [
+    activities,
+    criteria,
+    grades,
+    evaluations,
+    workUnits,
+    rubricItems,
+    rubricItemGrades,
+    criterionImplications,
+    criterionGradingConfig,
+  ]);
 
-  const activeModule = modules.find(m => m.id === activeModuleId) ?? modules[0] ?? null;
+  const activeModule = modules.find((m) => m.id === activeModuleId) ?? modules[0] ?? null;
 
   const setActiveModuleId = useCallback((moduleId: string) => {
     setActiveModuleIdState(moduleId);
@@ -152,6 +236,21 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
     setWorkUnits(data);
   }, [activeModuleId]);
 
+  const refreshCriterionGrading = useCallback(async () => {
+    const [config, implications, items, itemGrades] = await Promise.all([
+      criterionGradingConfigService.getByModule(activeModuleId),
+      criterionImplicationService.getByModule(activeModuleId),
+      rubricItemService.getByModule(activeModuleId),
+      rubricItemGradeService.getByModule(activeModuleId),
+    ]);
+    setCriterionGradingConfig(
+      config ?? { moduleId: activeModuleId, ...DEFAULT_CRITERION_GRADING_CONFIG }
+    );
+    setCriterionImplications(implications);
+    setRubricItems(items);
+    setRubricItemGrades(itemGrades);
+  }, [activeModuleId]);
+
   useEffect(() => {
     async function loadAll() {
       try {
@@ -159,7 +258,23 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         setError(null);
         await foundationService.claimLegacyData();
         const [
-          mods, evals, los, crit, wus, acts, studs, grd, raRels, incs, slogs, tutors, cevents,
+          mods,
+          evals,
+          los,
+          crit,
+          wus,
+          acts,
+          studs,
+          grd,
+          raRels,
+          incs,
+          slogs,
+          tutors,
+          cevents,
+          gradingConfig,
+          implications,
+          items,
+          itemGrades,
         ] = await Promise.all([
           moduleService.getAll(),
           evaluationService.getByModule(activeModuleId),
@@ -174,6 +289,10 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
           sessionLogService.getByModule(activeModuleId),
           tutoringService.getAll(),
           calendarEventService.getByModule(activeModuleId),
+          criterionGradingConfigService.getByModule(activeModuleId),
+          criterionImplicationService.getByModule(activeModuleId),
+          rubricItemService.getByModule(activeModuleId),
+          rubricItemGradeService.getByModule(activeModuleId),
         ]);
         setModules(mods);
         setEvaluations(evals);
@@ -188,6 +307,12 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         setSessionLogs(slogs);
         setTutoringActions(tutors);
         setCalendarEvents(cevents);
+        setCriterionGradingConfig(
+          gradingConfig ?? { moduleId: activeModuleId, ...DEFAULT_CRITERION_GRADING_CONFIG }
+        );
+        setCriterionImplications(implications);
+        setRubricItems(items);
+        setRubricItemGrades(itemGrades);
       } catch (e: any) {
         setError(e.message ?? 'Error cargando datos');
       } finally {
@@ -198,14 +323,44 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
   }, [activeModuleId]);
 
   return (
-    <EduTrackContext.Provider value={{
-      loading, error, activeModule, activeModuleId, setActiveModuleId, modules, evaluations, learningOutcomes, criteria,
-      workUnits, activities, students, grades, raRelationships, incidents, sessionLogs,
-      tutoringActions, calendarEvents,
-      refreshActivities, refreshStudents, refreshGrades, refreshIncidents,
-      refreshSessionLogs, refreshTutoringActions, refreshCalendarEvents,
-      refreshRARelationships, refreshLearningOutcomes, refreshCriteria, refreshWorkUnits,
-    }}>
+    <EduTrackContext.Provider
+      value={{
+        loading,
+        error,
+        activeModule,
+        activeModuleId,
+        setActiveModuleId,
+        modules,
+        evaluations,
+        learningOutcomes,
+        criteria,
+        workUnits,
+        activities,
+        students,
+        grades,
+        raRelationships,
+        incidents,
+        sessionLogs,
+        tutoringActions,
+        calendarEvents,
+        criterionGradingConfig,
+        criterionImplications,
+        rubricItems,
+        rubricItemGrades,
+        refreshActivities,
+        refreshStudents,
+        refreshGrades,
+        refreshIncidents,
+        refreshSessionLogs,
+        refreshTutoringActions,
+        refreshCalendarEvents,
+        refreshRARelationships,
+        refreshLearningOutcomes,
+        refreshCriteria,
+        refreshWorkUnits,
+        refreshCriterionGrading,
+      }}
+    >
       {children}
     </EduTrackContext.Provider>
   );

@@ -7,6 +7,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import StatusBadge from '@/components/ui/StatusBadge';
 import EmptyState from '@/components/ui/EmptyState';
 import { RUBRICS, getDifficultyPoints } from '@/lib/mockData';
+import { configuredCriterionWeight } from '@/lib/domain/criterionGrading';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import { activityService, type Activity } from '@/lib/services/edutrackService';
 import ActivityGeneratorModal from './ActivityGeneratorModal';
@@ -35,7 +36,7 @@ const STATUS_FLOW: Record<string, { next: string; label: string; color: string }
 const ACTIVITY_TYPES = ['práctica', 'examen', 'proyecto', 'exposición', 'cuestionario', 'trabajo'];
 
 export default function ActivitiesContent() {
-  const { activeModuleId, activities: dbActivities, evaluations: EVALUATIONS, workUnits: WORK_UNITS, criteria: CRITERIA, learningOutcomes: LEARNING_OUTCOMES, loading, refreshActivities } = useEduTrack();
+  const { activeModuleId, activities: dbActivities, evaluations: EVALUATIONS, workUnits: WORK_UNITS, criteria: CRITERIA, learningOutcomes: LEARNING_OUTCOMES, criterionGradingConfig, loading, refreshActivities } = useEduTrack();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterEval, setFilterEval] = useState('all');
@@ -76,9 +77,9 @@ export default function ActivitiesContent() {
   const computedCEWeight = useMemo(() => {
     return formData.ceIds.reduce((sum, ceId) => {
       const ce = CRITERIA.find(c => c.id === ceId);
-      return sum + (ce ? getDifficultyPoints(ce.difficulty) : 0);
+      return sum + (ce ? configuredCriterionWeight(ce.difficulty, criterionGradingConfig) : 0);
     }, 0);
-  }, [formData.ceIds]);
+  }, [formData.ceIds, criterionGradingConfig, CRITERIA]);
 
   const toggleCE = (ceId: string) => {
     setFormData(prev => ({
@@ -522,7 +523,7 @@ export default function ActivitiesContent() {
                     Puntos CE: <span className="font-semibold text-foreground">{getActivityCEWeight(detailActivity.id)}</span> ·
                     % Valor en {detailActivity.unitId ? 'UT' : 'Evaluación'}: <span className="font-semibold text-primary">{getActivityValuePct(detailActivity.id)}%</span>
                   </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">El peso se calcula como suma de los puntos de nivel de los CE asignados (básico=1, medio=2, avanzado=3). El % de valor es proporcional al total de puntos de todas las actividades del mismo contenedor.</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">El peso se calcula con la configuración criterial vigente (básico={criterionGradingConfig.basicWeight}, medio={criterionGradingConfig.mediumWeight}, avanzado={criterionGradingConfig.advancedWeight}). El % de valor es proporcional al total de puntos de todas las actividades del mismo contenedor.</p>
                 </div>
               </div>
 
@@ -709,7 +710,7 @@ export default function ActivitiesContent() {
                   <div className="mb-2 p-2 bg-primary/5 border border-primary/20 rounded-lg flex items-center gap-2">
                     <Info size={12} className="text-primary flex-shrink-0" />
                     <p className="text-[10px] text-muted-foreground">
-                      El peso de la actividad se calcula como la suma de los puntos de nivel de los CE seleccionados (Básico=1, Medio=2, Avanzado=3): <span className="font-semibold text-foreground">{computedCEWeight} pts</span>. Los CE se auto-poblarán en la rúbrica de corrección IA.
+                      El peso de la actividad se calcula como la suma configurada de los CE seleccionados (Básico={criterionGradingConfig.basicWeight}, Medio={criterionGradingConfig.mediumWeight}, Avanzado={criterionGradingConfig.advancedWeight}): <span className="font-semibold text-foreground">{computedCEWeight} pts</span>. Los CE se auto-poblarán en la rúbrica de corrección IA.
                     </p>
                   </div>
                 )}

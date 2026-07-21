@@ -1,0 +1,1984 @@
+{
+  "modulo": {
+    "codigo": "0485",
+    "nombre": "Programación",
+    "fuente": "RD 405/2023"
+  },
+  "version": 2,
+  "origen": "Fusión del grafo v1 (cobertura total binaria) con el Mapa de Compatibilidad Competencial (MCC v2), niveles FULL/PARCIAL/DÉBIL mapeados a heredar/mínima/indicio y revisados arista a arista",
+  "pesos_tipo": {
+    "B": 3,
+    "M": 2,
+    "A": 1
+  },
+  "niveles": {
+    "H": "heredar la nota del implicante",
+    "M": "evidencia mínima (umbral): acredita superación, no grado",
+    "I": "indicio documental de apoyo: no genera nota"
+  },
+  "reglas": [
+    "Sentido único posterior→anterior",
+    "Solo H y M acreditan; la cobertura se calcula sobre H∪M",
+    "La evidencia implícita vale max(valor del nivel, mejor evidencia previa)",
+    "La evidencia directa posterior prevalece sobre la implícita anterior",
+    "La activación exige nota del implicante ≥ umbral"
+  ],
+  "criterios": [
+    {
+      "id": "1a",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "1b",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1c"]
+    },
+    {
+      "id": "1c",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "1d",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "1e",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d"]
+    },
+    {
+      "id": "1f",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "1g",
+      "ra": "RA1",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e"]
+    },
+    {
+      "id": "1h",
+      "ra": "RA1",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d"]
+    },
+    {
+      "id": "1i",
+      "ra": "RA1",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2a",
+      "ra": "RA2",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2b",
+      "ra": "RA2",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2c",
+      "ra": "RA2",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2d",
+      "ra": "RA2",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2c"]
+    },
+    {
+      "id": "2e",
+      "ra": "RA2",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2f",
+      "ra": "RA2",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2c", "2d"]
+    },
+    {
+      "id": "2g",
+      "ra": "RA2",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "2h",
+      "ra": "RA2",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2c"]
+    },
+    {
+      "id": "2i",
+      "ra": "RA2",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1c", "2b"]
+    },
+    {
+      "id": "3a",
+      "ra": "RA3",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g"]
+    },
+    {
+      "id": "3b",
+      "ra": "RA3",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g"]
+    },
+    {
+      "id": "3c",
+      "ra": "RA3",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "3d",
+      "ra": "RA3",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "3e",
+      "ra": "RA3",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "3a", "3b"]
+    },
+    {
+      "id": "3f",
+      "ra": "RA3",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "3g",
+      "ra": "RA3",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "3h",
+      "ra": "RA3",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["3d"]
+    },
+    {
+      "id": "3i",
+      "ra": "RA3",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "4a",
+      "ra": "RA4",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a"]
+    },
+    {
+      "id": "4b",
+      "ra": "RA4",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d"]
+    },
+    {
+      "id": "4c",
+      "ra": "RA4",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4b"]
+    },
+    {
+      "id": "4d",
+      "ra": "RA4",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "2c", "2h", "4b"]
+    },
+    {
+      "id": "4e",
+      "ra": "RA4",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "2c", "2d", "2f", "4b"]
+    },
+    {
+      "id": "4f",
+      "ra": "RA4",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "4b"]
+    },
+    {
+      "id": "4g",
+      "ra": "RA4",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "4b"]
+    },
+    {
+      "id": "4h",
+      "ra": "RA4",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "2e", "4b"]
+    },
+    {
+      "id": "4i",
+      "ra": "RA4",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "2g", "4b"]
+    },
+    {
+      "id": "5a",
+      "ra": "RA5",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d"]
+    },
+    {
+      "id": "5b",
+      "ra": "RA5",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1h"]
+    },
+    {
+      "id": "5c",
+      "ra": "RA5",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["2g"]
+    },
+    {
+      "id": "5d",
+      "ra": "RA5",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "3b", "3d"]
+    },
+    {
+      "id": "5e",
+      "ra": "RA5",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "3b", "3d", "5d"]
+    },
+    {
+      "id": "5f",
+      "ra": "RA5",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4b", "4c"]
+    },
+    {
+      "id": "5g",
+      "ra": "RA5",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4b", "4c"]
+    },
+    {
+      "id": "5h",
+      "ra": "RA5",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4b", "4c", "5f", "5g"]
+    },
+    {
+      "id": "6a",
+      "ra": "RA6",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "3b"]
+    },
+    {
+      "id": "6b",
+      "ra": "RA6",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["2g"]
+    },
+    {
+      "id": "6c",
+      "ra": "RA6",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "2c", "2d", "3b"]
+    },
+    {
+      "id": "6d",
+      "ra": "RA6",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "2c", "2d", "3b", "6c"]
+    },
+    {
+      "id": "6e",
+      "ra": "RA6",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "6f",
+      "ra": "RA6",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4b", "4c"]
+    },
+    {
+      "id": "6g",
+      "ra": "RA6",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "6h",
+      "ra": "RA6",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2g"]
+    },
+    {
+      "id": "6i",
+      "ra": "RA6",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["2g", "6h"]
+    },
+    {
+      "id": "6j",
+      "ra": "RA6",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "7a",
+      "ra": "RA7",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "7b",
+      "ra": "RA7",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "4b", "4g", "7a"]
+    },
+    {
+      "id": "7c",
+      "ra": "RA7",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["7a"]
+    },
+    {
+      "id": "7d",
+      "ra": "RA7",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "4a", "4b", "4f", "4g", "7a"]
+    },
+    {
+      "id": "7e",
+      "ra": "RA7",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "1e", "4a", "4b", "4c", "4f", "4g", "7a"]
+    },
+    {
+      "id": "7f",
+      "ra": "RA7",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["3f"]
+    },
+    {
+      "id": "7g",
+      "ra": "RA7",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": [
+        "1a",
+        "1d",
+        "1e",
+        "1g",
+        "2c",
+        "2d",
+        "2f",
+        "3b",
+        "4a",
+        "4b",
+        "4c",
+        "4e",
+        "4f",
+        "4g",
+        "7a",
+        "7e"
+      ]
+    },
+    {
+      "id": "7h",
+      "ra": "RA7",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1i", "3g"]
+    },
+    {
+      "id": "7i",
+      "ra": "RA7",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "7j",
+      "ra": "RA7",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "8a",
+      "ra": "RA8",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "8b",
+      "ra": "RA8",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "8c",
+      "ra": "RA8",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "8d",
+      "ra": "RA8",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "8e",
+      "ra": "RA8",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "4b"]
+    },
+    {
+      "id": "8f",
+      "ra": "RA8",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1a", "1d", "2c", "2d", "2f", "3d", "4b", "4e", "8e"]
+    },
+    {
+      "id": "8g",
+      "ra": "RA8",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": [
+        "1a",
+        "1d",
+        "1e",
+        "1g",
+        "2c",
+        "2d",
+        "2f",
+        "3b",
+        "3d",
+        "4b",
+        "4e",
+        "8e",
+        "8f"
+      ]
+    },
+    {
+      "id": "8h",
+      "ra": "RA8",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1a", "1d", "2c", "2d", "2f", "3d", "4b", "4e", "8e", "8f"]
+    },
+    {
+      "id": "9a",
+      "ra": "RA9",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": []
+    },
+    {
+      "id": "9b",
+      "ra": "RA9",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2g", "3d"]
+    },
+    {
+      "id": "9c",
+      "ra": "RA9",
+      "tipo": "B",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2g", "3d", "9b"]
+    },
+    {
+      "id": "9d",
+      "ra": "RA9",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "2g", "3b", "3d", "9b"]
+    },
+    {
+      "id": "9e",
+      "ra": "RA9",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["2g", "3d", "9b"]
+    },
+    {
+      "id": "9f",
+      "ra": "RA9",
+      "tipo": "M",
+      "evidencia_directa_obligatoria": false,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "2g", "3b", "3d", "9b", "9d"]
+    },
+    {
+      "id": "9g",
+      "ra": "RA9",
+      "tipo": "A",
+      "evidencia_directa_obligatoria": true,
+      "cierre_transitivo_HM": ["1d", "1e", "1g", "2g", "3b", "3d", "9b", "9c", "9d", "9e", "9f"]
+    }
+  ],
+  "aristas": [
+    {
+      "origen": "1b",
+      "destino": "1c",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear proyectos de desarrollo se realiza necesariamente dentro del entorno integrado"
+    },
+    {
+      "origen": "1e",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear y utilizar variables exige identificar sus tipos y su utilidad"
+    },
+    {
+      "origen": "1g",
+      "destino": "1e",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Las expresiones del programa operan sobre variables creadas y utilizadas"
+    },
+    {
+      "origen": "1h",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Comprobar conversiones de tipo exige identificar los tipos implicados"
+    },
+    {
+      "origen": "2d",
+      "destino": "2c",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Utilizar métodos y propiedades de los objetos exige haberlos instanciado"
+    },
+    {
+      "origen": "2f",
+      "destino": "2d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Utilizar parámetros en las llamadas exige llamar a métodos de objetos"
+    },
+    {
+      "origen": "2h",
+      "destino": "2c",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Utilizar constructores es instanciar objetos mediante ellos"
+    },
+    {
+      "origen": "2i",
+      "destino": "2b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Usar el IDE en la creación y compilación de programas simples exige escribirlos"
+    },
+    {
+      "origen": "3e",
+      "destino": "3a",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Los programas con diferentes estructuras de control incluyen necesariamente la selección"
+    },
+    {
+      "origen": "3e",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Los programas con diferentes estructuras de control incluyen necesariamente la repetición"
+    },
+    {
+      "origen": "3h",
+      "destino": "3d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear excepciones propias exige escribir código con control de excepciones"
+    },
+    {
+      "origen": "4c",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Definir propiedades y métodos se hace dentro de clases definidas"
+    },
+    {
+      "origen": "4d",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear constructores exige definir la clase que los contiene"
+    },
+    {
+      "origen": "4e",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Instanciar y utilizar objetos de las clases creadas exige haberlas definido"
+    },
+    {
+      "origen": "4f",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Controlar la visibilidad de clases y miembros exige haberlos definido"
+    },
+    {
+      "origen": "4g",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Definir clases heredadas exige definir clases"
+    },
+    {
+      "origen": "4h",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear métodos estáticos exige definirlos en una clase"
+    },
+    {
+      "origen": "4i",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Crear librerías de clases exige definir las clases que las componen"
+    },
+    {
+      "origen": "5e",
+      "destino": "5d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Emplear diversos métodos de acceso al contenido de ficheros exige usarlos para almacenar y recuperar"
+    },
+    {
+      "origen": "5h",
+      "destino": "5f",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Los programas con interfaz gráfica exigen haberla creado"
+    },
+    {
+      "origen": "5h",
+      "destino": "5g",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "La E/S mediante interfaz gráfica exige programar sus controladores de eventos"
+    },
+    {
+      "origen": "6d",
+      "destino": "6c",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Utilizar iteradores para recorrer listas exige utilizar listas"
+    },
+    {
+      "origen": "6i",
+      "destino": "6h",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Manipular documentos de intercambio exige identificar las clases que los tratan"
+    },
+    {
+      "origen": "7b",
+      "destino": "7a",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Bloquear y forzar la herencia exige identificar sus conceptos"
+    },
+    {
+      "origen": "7c",
+      "destino": "7a",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Reconocer la incidencia de los constructores en la herencia exige sus conceptos"
+    },
+    {
+      "origen": "7d",
+      "destino": "7a",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Sobrescribir métodos de la superclase exige los conceptos de herencia"
+    },
+    {
+      "origen": "7e",
+      "destino": "7a",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Diseñar jerarquías exige los conceptos de herencia, superclase y subclase"
+    },
+    {
+      "origen": "7g",
+      "destino": "7e",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Implementar y utilizar jerarquías en programas exige diseñarlas y aplicarlas"
+    },
+    {
+      "origen": "8f",
+      "destino": "8e",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Almacenar objetos en las bases creadas exige haberlas creado con sus estructuras"
+    },
+    {
+      "origen": "8g",
+      "destino": "8f",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Recuperar, actualizar y eliminar objetos exige haberlos almacenado"
+    },
+    {
+      "origen": "8h",
+      "destino": "8f",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Gestionar tipos estructurados y compuestos incluye almacenar objetos"
+    },
+    {
+      "origen": "9c",
+      "destino": "9b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Almacenar información en la base exige una conexión programada"
+    },
+    {
+      "origen": "9d",
+      "destino": "9b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Recuperar y mostrar información exige una conexión programada"
+    },
+    {
+      "origen": "9e",
+      "destino": "9b",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Borrar y modificar información exige una conexión programada"
+    },
+    {
+      "origen": "9f",
+      "destino": "9d",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Las aplicaciones que muestran información recuperan y muestran datos almacenados"
+    },
+    {
+      "origen": "9g",
+      "destino": "9c",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Gestionar la información incluye almacenarla"
+    },
+    {
+      "origen": "9g",
+      "destino": "9e",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Gestionar la información incluye borrarla y modificarla"
+    },
+    {
+      "origen": "9g",
+      "destino": "9f",
+      "nivel": "M",
+      "ambito": "intra-RA",
+      "fuente": "v1",
+      "justificacion": "Gestionar la información incluye mostrarla en la aplicación"
+    },
+    {
+      "origen": "2i",
+      "destino": "1c",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Usar el IDE para crear y compilar ejercita íntegramente la utilización de entornos integrados"
+    },
+    {
+      "origen": "3a",
+      "destino": "1g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Las condiciones de selección son expresiones con operadores relacionales y lógicos"
+    },
+    {
+      "origen": "3b",
+      "destino": "1g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Las condiciones de los bucles son expresiones con operadores"
+    },
+    {
+      "origen": "4d",
+      "destino": "2h",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Crear constructores va más allá de utilizarlos: los ejercita por completo"
+    },
+    {
+      "origen": "4e",
+      "destino": "2d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Utilizar objetos de clases propias ejercita el uso de métodos y propiedades"
+    },
+    {
+      "origen": "4h",
+      "destino": "2e",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Crear y usar métodos estáticos ejercita las llamadas a métodos estáticos"
+    },
+    {
+      "origen": "5d",
+      "destino": "3d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "La entrada/salida de ficheros exige control de excepciones comprobadas"
+    },
+    {
+      "origen": "6c",
+      "destino": "2c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Usar listas es instanciar objetos de clases predefinidas (colecciones estándar)"
+    },
+    {
+      "origen": "6c",
+      "destino": "2d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Operar con listas es utilizar los métodos de sus objetos"
+    },
+    {
+      "origen": "6d",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Recorrer con iteradores se materializa en estructuras de repetición"
+    },
+    {
+      "origen": "6f",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Crear clases genéricas exige definir clases"
+    },
+    {
+      "origen": "7d",
+      "destino": "4g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Crear clases heredadas que sobrescriben exige definir y utilizar clases heredadas"
+    },
+    {
+      "origen": "7e",
+      "destino": "4g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Las jerarquías se construyen definiendo y utilizando clases heredadas"
+    },
+    {
+      "origen": "7f",
+      "destino": "3f",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Probar y depurar jerarquías ejercita la prueba y depuración de programas"
+    },
+    {
+      "origen": "7g",
+      "destino": "4e",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Los programas con jerarquías instancian y utilizan objetos de clases propias"
+    },
+    {
+      "origen": "7h",
+      "destino": "3g",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Enunciado idéntico en un contexto posterior: comentar y documentar el código"
+    },
+    {
+      "origen": "8f",
+      "destino": "4e",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Almacenar objetos exige programas que los instancien y utilicen"
+    },
+    {
+      "origen": "9b",
+      "destino": "3d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "v1",
+      "justificacion": "Programar conexiones exige control de excepciones ante errores de conexión"
+    },
+    {
+      "origen": "4a",
+      "destino": "1a",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Reconocer la sintaxis de una clase implica identificar los bloques del programa"
+    },
+    {
+      "origen": "4a",
+      "destino": "1d",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Reconocer la estructura de clase solo apoya, no ejercita, la identificación de tipos"
+    },
+    {
+      "origen": "4b",
+      "destino": "1a",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Definir clases sitúa y ejercita los bloques estructurales del programa"
+    },
+    {
+      "origen": "4b",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Definir clases con atributos ejercita la identificación de tipos de variable"
+    },
+    {
+      "origen": "4c",
+      "destino": "1d",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Definir propiedades es declarar variables tipadas"
+    },
+    {
+      "origen": "4c",
+      "destino": "1e",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Definir propiedades y métodos crea y utiliza variables"
+    },
+    {
+      "origen": "4c",
+      "destino": "1g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Los métodos pueden ser triviales: los operadores en expresiones solo quedan apoyados"
+    },
+    {
+      "origen": "4e",
+      "destino": "2c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Instanciar clases propias demuestra la instanciación de objetos (subsume el caso predefinido)"
+    },
+    {
+      "origen": "4e",
+      "destino": "2f",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Utilizar objetos propios ejercita el paso de parámetros en llamadas"
+    },
+    {
+      "origen": "4i",
+      "destino": "2g",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Crear librerías de clases subsume incorporar y utilizar librerías de objetos"
+    },
+    {
+      "origen": "4e",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Un programa con objetos no contiene necesariamente selección: solo apoyo"
+    },
+    {
+      "origen": "4e",
+      "destino": "3b",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Un programa con objetos no contiene necesariamente repetición: solo apoyo"
+    },
+    {
+      "origen": "5a",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "La E/S por consola lee y escribe variables tipadas"
+    },
+    {
+      "origen": "5a",
+      "destino": "1h",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Usar consola no comprueba conversiones de tipo: solo apoyo"
+    },
+    {
+      "origen": "5b",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Aplicar formatos ejercita variables y sus tipos"
+    },
+    {
+      "origen": "5b",
+      "destino": "1h",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Formatear la visualización ejercita conversiones explícitas e implícitas"
+    },
+    {
+      "origen": "5c",
+      "destino": "2g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Reconocer librerías de E/S ejercita la incorporación de librerías de objetos"
+    },
+    {
+      "origen": "5d",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "El acceso secuencial a ficheros es iteración"
+    },
+    {
+      "origen": "5e",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Los métodos de acceso al contenido recorren el fichero con repetición"
+    },
+    {
+      "origen": "5e",
+      "destino": "3d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "El acceso a ficheros exige control de excepciones de E/S"
+    },
+    {
+      "origen": "5f",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Construir la interfaz define clases (ventanas, paneles)"
+    },
+    {
+      "origen": "5f",
+      "destino": "4c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "La interfaz define propiedades y métodos de sus componentes"
+    },
+    {
+      "origen": "5f",
+      "destino": "4e",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "La GUI no exige instanciar clases de dominio propias: apoyo"
+    },
+    {
+      "origen": "5g",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Los controladores de eventos se definen como clases o implementaciones"
+    },
+    {
+      "origen": "5g",
+      "destino": "4c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Programar controladores define métodos de respuesta"
+    },
+    {
+      "origen": "5g",
+      "destino": "4e",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: el controlador no exige objetos de dominio propios"
+    },
+    {
+      "origen": "5h",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Los programas con GUI definen las clases de su interfaz"
+    },
+    {
+      "origen": "5h",
+      "destino": "4c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "La E/S gráfica define métodos de presentación y captura"
+    },
+    {
+      "origen": "5h",
+      "destino": "4e",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: la E/S gráfica no exige objetos de dominio propios"
+    },
+    {
+      "origen": "6a",
+      "destino": "1d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Programar con arrays declara y utiliza variables indexadas tipadas"
+    },
+    {
+      "origen": "6a",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Los programas con matrices las recorren con estructuras de repetición"
+    },
+    {
+      "origen": "6b",
+      "destino": "2g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Reconocer librerías de tipos avanzados ejercita el uso de librerías de objetos"
+    },
+    {
+      "origen": "6h",
+      "destino": "2g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Identificar clases de intercambio de datos ejercita las librerías de objetos"
+    },
+    {
+      "origen": "6c",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Usar listas no exige selección: apoyo"
+    },
+    {
+      "origen": "6c",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Almacenar y procesar información en listas se materializa en recorridos"
+    },
+    {
+      "origen": "6f",
+      "destino": "4c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Las clases genéricas definen propiedades y métodos parametrizados"
+    },
+    {
+      "origen": "6f",
+      "destino": "4i",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Crear clases genéricas no equivale a crear librerías: apoyo"
+    },
+    {
+      "origen": "6i",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: la manipulación de documentos usa control de flujo sin garantizarlo todo"
+    },
+    {
+      "origen": "6i",
+      "destino": "3b",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: recorrido de estructuras del documento"
+    },
+    {
+      "origen": "6j",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: la lógica declarativa de agregados no ejercita la selección imperativa"
+    },
+    {
+      "origen": "6j",
+      "destino": "3b",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: los agregados sustituyen, no ejercitan, la repetición imperativa"
+    },
+    {
+      "origen": "7b",
+      "destino": "4g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Bloquear y forzar la herencia exige definir y utilizar clases heredadas"
+    },
+    {
+      "origen": "7c",
+      "destino": "4g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Reconocer la incidencia de constructores es conceptual: apoyo"
+    },
+    {
+      "origen": "7d",
+      "destino": "4a",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "La producción competente (sobrescribir) subsume la identificación de la sintaxis de clase"
+    },
+    {
+      "origen": "7d",
+      "destino": "4f",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Sobrescribir exige gestionar la visibilidad de los miembros"
+    },
+    {
+      "origen": "7e",
+      "destino": "4a",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Diseñar jerarquías subsume el reconocimiento de la estructura de una clase"
+    },
+    {
+      "origen": "7e",
+      "destino": "4c",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Las jerarquías definen propiedades y métodos en cada nivel"
+    },
+    {
+      "origen": "7e",
+      "destino": "4f",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "El diseño de jerarquías exige decidir la visibilidad de clases y miembros"
+    },
+    {
+      "origen": "7g",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: los programas con jerarquías no garantizan toda la selección"
+    },
+    {
+      "origen": "7g",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Implementar y usar jerarquías en programas reales recorre colecciones de objetos"
+    },
+    {
+      "origen": "7h",
+      "destino": "1i",
+      "nivel": "H",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Mismo criterio: comentar el código (RA1) queda subsumido por documentarlo (RA7)"
+    },
+    {
+      "origen": "7i",
+      "destino": "4g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Evaluar escenarios de interfaces es conceptual: apoyo sobre la herencia"
+    },
+    {
+      "origen": "7j",
+      "destino": "4g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Evaluar herencia frente a composición es criterio de diseño: apoyo"
+    },
+    {
+      "origen": "8a",
+      "destino": "2a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo conceptual: identificar BDOO presupone fundamentos de POO"
+    },
+    {
+      "origen": "8a",
+      "destino": "4a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo conceptual sobre la estructura de clase"
+    },
+    {
+      "origen": "8b",
+      "destino": "2a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo conceptual"
+    },
+    {
+      "origen": "8b",
+      "destino": "4a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo conceptual"
+    },
+    {
+      "origen": "8e",
+      "destino": "4b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Crear estructuras de almacenamiento de objetos exige definir sus clases"
+    },
+    {
+      "origen": "8e",
+      "destino": "4c",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: las estructuras no exigen definir métodos de negocio"
+    },
+    {
+      "origen": "8e",
+      "destino": "4g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "La persistencia no exige herencia necesariamente: apoyo"
+    },
+    {
+      "origen": "8e",
+      "destino": "6c",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: las estructuras pueden no usar listas"
+    },
+    {
+      "origen": "8f",
+      "destino": "3d",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "La persistencia exige control de excepciones"
+    },
+    {
+      "origen": "8f",
+      "destino": "5d",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "El SGBD gestiona el almacenamiento: los ficheros solo quedan apoyados"
+    },
+    {
+      "origen": "8g",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Recuperar y actualizar conjuntos de objetos los recorre con repetición"
+    },
+    {
+      "origen": "8g",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: el CRUD no garantiza toda la selección"
+    },
+    {
+      "origen": "8g",
+      "destino": "6c",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: los resultados pueden no materializarse en listas"
+    },
+    {
+      "origen": "8g",
+      "destino": "6d",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: la iteración puede no usar iteradores explícitos"
+    },
+    {
+      "origen": "8h",
+      "destino": "7e",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: los tipos estructurados se apoyan en jerarquías sin exigir su diseño completo"
+    },
+    {
+      "origen": "8h",
+      "destino": "7g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo"
+    },
+    {
+      "origen": "9b",
+      "destino": "2g",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Programar conexiones incorpora y utiliza librerías de acceso a datos"
+    },
+    {
+      "origen": "9b",
+      "destino": "5c",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: reconocer posibilidades de E/S no queda ejercitado por conectar"
+    },
+    {
+      "origen": "9c",
+      "destino": "1d",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: mapear parámetros usa variables sin ejercitar la identificación de todos los tipos"
+    },
+    {
+      "origen": "9c",
+      "destino": "4e",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: almacenar información no exige objetos de clases propias"
+    },
+    {
+      "origen": "9d",
+      "destino": "3b",
+      "nivel": "M",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Recorrer el conjunto de resultados se materializa en estructuras de repetición"
+    },
+    {
+      "origen": "9d",
+      "destino": "3a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo"
+    },
+    {
+      "origen": "9d",
+      "destino": "6a",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo: los resultados pueden no volcarse a matrices"
+    },
+    {
+      "origen": "9d",
+      "destino": "6c",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo"
+    },
+    {
+      "origen": "9d",
+      "destino": "6d",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC-rev",
+      "justificacion": "Apoyo"
+    },
+    {
+      "origen": "9f",
+      "destino": "5f",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo: la aplicación puede mostrar por consola"
+    },
+    {
+      "origen": "9f",
+      "destino": "5g",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo"
+    },
+    {
+      "origen": "9f",
+      "destino": "5h",
+      "nivel": "I",
+      "ambito": "inter-RA",
+      "fuente": "MCC",
+      "justificacion": "Apoyo"
+    }
+  ],
+  "rechazadas": [
+    {
+      "elemento": "6c·6d·6e → 3c",
+      "motivo": "Usar colecciones no exige sentencias de salto"
+    },
+    {
+      "elemento": "6e → 3a·3b",
+      "motivo": "Reconocer características y ventajas es conceptual: no ejercita control de flujo"
+    },
+    {
+      "elemento": "7a → 4g",
+      "motivo": "La identificación no subsume la producción: sentido inverso del principio"
+    },
+    {
+      "elemento": "9c → 1h",
+      "motivo": "Mapear parámetros de sentencias no es comprobar conversiones de tipo"
+    },
+    {
+      "elemento": "9e → 8g y 9g → 8f·8g",
+      "motivo": "Cruzan paradigmas (relacional/OO), como desaconsejan las propias notas del MCC"
+    },
+    {
+      "elemento": "Regla MAX estática del MCC",
+      "motivo": "Sustituida por evidencias fechadas: preserva que lo observado después prevalece sobre lo inferido antes"
+    },
+    {
+      "elemento": "Matriz RA→RA declarada del MCC",
+      "motivo": "Sustituida por la matriz derivada del grafo: contenía valores sin cadena que los sustente (p. ej. RA9→RA7 = 45 %)"
+    }
+  ],
+  "orden_topologico": [
+    "1b",
+    "1f",
+    "2i",
+    "1c",
+    "2b",
+    "3c",
+    "3e",
+    "3h",
+    "3i",
+    "4d",
+    "2h",
+    "4h",
+    "2e",
+    "5a",
+    "5b",
+    "1h",
+    "5e",
+    "6b",
+    "6e",
+    "6f",
+    "4i",
+    "6g",
+    "6i",
+    "6h",
+    "6j",
+    "7b",
+    "7c",
+    "7d",
+    "7f",
+    "3f",
+    "7h",
+    "1i",
+    "3g",
+    "7i",
+    "7j",
+    "8a",
+    "8b",
+    "2a",
+    "8c",
+    "8d",
+    "8g",
+    "8h",
+    "7g",
+    "7e",
+    "4a",
+    "4f",
+    "7a",
+    "8f",
+    "5d",
+    "8e",
+    "4g",
+    "9a",
+    "9g",
+    "9c",
+    "9e",
+    "9f",
+    "5h",
+    "5f",
+    "5g",
+    "4c",
+    "4e",
+    "2f",
+    "4b",
+    "1a",
+    "9d",
+    "6a",
+    "6d",
+    "6c",
+    "2d",
+    "2c",
+    "3a",
+    "3b",
+    "1g",
+    "1e",
+    "1d",
+    "9b",
+    "3d",
+    "5c",
+    "2g"
+  ],
+  "cobertura_ra": [
+    {
+      "de": "RA2",
+      "a": "RA1",
+      "pct": 12,
+      "pct_v1": 12,
+      "complemento": ["1a", "1b", "1d", "1e", "1f", "1g", "1h", "1i"]
+    },
+    {
+      "de": "RA3",
+      "a": "RA1",
+      "pct": 32,
+      "pct_v1": 32,
+      "complemento": ["1a", "1b", "1c", "1f", "1h", "1i"]
+    },
+    {
+      "de": "RA4",
+      "a": "RA1",
+      "pct": 36,
+      "pct_v1": 0,
+      "complemento": ["1b", "1c", "1f", "1g", "1h", "1i"]
+    },
+    {
+      "de": "RA4",
+      "a": "RA2",
+      "pct": 60.9,
+      "pct_v1": 43.5,
+      "complemento": ["2a", "2b", "2i"]
+    },
+    {
+      "de": "RA5",
+      "a": "RA1",
+      "pct": 52,
+      "pct_v1": 0,
+      "complemento": ["1b", "1c", "1f", "1i"]
+    },
+    {
+      "de": "RA5",
+      "a": "RA2",
+      "pct": 8.7,
+      "pct_v1": 0,
+      "complemento": ["2a", "2b", "2c", "2d", "2e", "2f", "2h", "2i"]
+    },
+    {
+      "de": "RA5",
+      "a": "RA3",
+      "pct": 25,
+      "pct_v1": 10,
+      "complemento": ["3a", "3c", "3e", "3f", "3g", "3h", "3i"]
+    },
+    {
+      "de": "RA5",
+      "a": "RA4",
+      "pct": 30,
+      "pct_v1": 0,
+      "complemento": ["4a", "4d", "4e", "4f", "4g", "4h", "4i"]
+    },
+    {
+      "de": "RA6",
+      "a": "RA1",
+      "pct": 44,
+      "pct_v1": 32,
+      "complemento": ["1b", "1c", "1f", "1h", "1i"]
+    },
+    {
+      "de": "RA6",
+      "a": "RA2",
+      "pct": 34.8,
+      "pct_v1": 26.1,
+      "complemento": ["2a", "2b", "2e", "2f", "2h", "2i"]
+    },
+    {
+      "de": "RA6",
+      "a": "RA3",
+      "pct": 15,
+      "pct_v1": 15,
+      "complemento": ["3a", "3c", "3d", "3e", "3f", "3g", "3h", "3i"]
+    },
+    {
+      "de": "RA6",
+      "a": "RA4",
+      "pct": 30,
+      "pct_v1": 15,
+      "complemento": ["4a", "4d", "4e", "4f", "4g", "4h", "4i"]
+    },
+    {
+      "de": "RA7",
+      "a": "RA1",
+      "pct": 56,
+      "pct_v1": 0,
+      "complemento": ["1b", "1c", "1f", "1h"]
+    },
+    {
+      "de": "RA7",
+      "a": "RA2",
+      "pct": 34.8,
+      "pct_v1": 26.1,
+      "complemento": ["2a", "2b", "2e", "2g", "2h", "2i"]
+    },
+    {
+      "de": "RA7",
+      "a": "RA3",
+      "pct": 45,
+      "pct_v1": 30,
+      "complemento": ["3a", "3c", "3d", "3e", "3h", "3i"]
+    },
+    {
+      "de": "RA7",
+      "a": "RA4",
+      "pct": 70,
+      "pct_v1": 30,
+      "complemento": ["4d", "4h", "4i"]
+    },
+    {
+      "de": "RA8",
+      "a": "RA1",
+      "pct": 44,
+      "pct_v1": 0,
+      "complemento": ["1b", "1c", "1f", "1h", "1i"]
+    },
+    {
+      "de": "RA8",
+      "a": "RA2",
+      "pct": 34.8,
+      "pct_v1": 26.1,
+      "complemento": ["2a", "2b", "2e", "2g", "2h", "2i"]
+    },
+    {
+      "de": "RA8",
+      "a": "RA3",
+      "pct": 25,
+      "pct_v1": 0,
+      "complemento": ["3a", "3c", "3e", "3f", "3g", "3h", "3i"]
+    },
+    {
+      "de": "RA8",
+      "a": "RA4",
+      "pct": 25,
+      "pct_v1": 25,
+      "complemento": ["4a", "4c", "4d", "4f", "4g", "4h", "4i"]
+    },
+    {
+      "de": "RA9",
+      "a": "RA1",
+      "pct": 32,
+      "pct_v1": 0,
+      "complemento": ["1a", "1b", "1c", "1f", "1h", "1i"]
+    },
+    {
+      "de": "RA9",
+      "a": "RA2",
+      "pct": 8.7,
+      "pct_v1": 0,
+      "complemento": ["2a", "2b", "2c", "2d", "2e", "2f", "2h", "2i"]
+    },
+    {
+      "de": "RA9",
+      "a": "RA3",
+      "pct": 25,
+      "pct_v1": 10,
+      "complemento": ["3a", "3c", "3e", "3f", "3g", "3h", "3i"]
+    }
+  ]
+}
