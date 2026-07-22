@@ -1,7 +1,15 @@
 'use client';
 
-import { CourseManagementFeature, FeaturePage } from '@/components/AddedCapabilities';
+import { FeaturePage } from '@/components/AddedCapabilities';
+import CourseManagementWorkspace from './components/CourseManagementWorkspace';
 
 export default function CourseManagementPage() {
-  return <FeaturePage title="Gestión académica" description="Módulos, grupos, matrículas y escalas de calificación de EduTrack."><CourseManagementFeature /></FeaturePage>;
+  return (
+    <FeaturePage
+      title="Configuración"
+      description="Gestiona la estructura académica y las preferencias del módulo activo."
+    >
+      <CourseManagementWorkspace />
+    </FeaturePage>
+  );
 }

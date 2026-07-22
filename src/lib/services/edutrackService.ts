@@ -149,8 +149,17 @@ export interface CalendarEvent {
   moduleId: string;
   date: string;
   title: string;
-  type: 'entrega' | 'examen' | 'tutoría' | 'festivo' | 'reunión' | 'otro';
+  type: string;
   notes?: string;
+}
+
+export interface CalendarEventType {
+  id: string;
+  moduleId: string;
+  code: string;
+  name: string;
+  color: string;
+  sortOrder: number;
 }
 
 export interface ContentItem {
@@ -1578,6 +1587,81 @@ export const calendarEventService = {
       console.error('calendarEventService.delete:', e.message);
       throw e;
     }
+  },
+};
+
+const DEFAULT_CALENDAR_EVENT_TYPES: Omit<CalendarEventType, 'id' | 'moduleId'>[] = [
+  { code: 'entrega', name: 'Entrega', color: '#2563eb', sortOrder: 10 },
+  { code: 'examen', name: 'Examen', color: '#dc2626', sortOrder: 20 },
+  { code: 'tutoría', name: 'Tutoría', color: '#0891b2', sortOrder: 30 },
+  { code: 'festivo', name: 'Festivo oficial', color: '#e11d48', sortOrder: 40 },
+  { code: 'reunión', name: 'Claustro / reunión', color: '#d97706', sortOrder: 50 },
+  { code: 'otro', name: 'Actividad lectiva', color: '#64748b', sortOrder: 60 },
+];
+
+// ─── CALENDAR EVENT TYPES ────────────────────────────────────────────────────
+export const calendarEventTypeService = {
+  async getByModule(moduleId: string): Promise<CalendarEventType[]> {
+    const supabase = createClient();
+    const read = async () =>
+      supabase
+        .from('calendar_event_types')
+        .select('*')
+        .eq('module_id', moduleId)
+        .order('sort_order');
+
+    let { data, error } = await read();
+    if (error) {
+      if (isSchemaError(error)) throw error;
+      return [];
+    }
+    if (!data?.length) {
+      const defaults = DEFAULT_CALENDAR_EVENT_TYPES.map((type) => ({
+        id: `${moduleId}-calendar-type-${type.code}`,
+        module_id: moduleId,
+        code: type.code,
+        name: type.name,
+        color: type.color,
+        sort_order: type.sortOrder,
+      }));
+      const seeded = await supabase.from('calendar_event_types').upsert(defaults).select('*');
+      if (seeded.error) throw seeded.error;
+      data = seeded.data;
+    }
+    return (data || []).map((row) => ({
+      id: row.id,
+      moduleId: row.module_id,
+      code: row.code,
+      name: row.name,
+      color: row.color,
+      sortOrder: row.sort_order,
+    }));
+  },
+
+  async upsert(type: CalendarEventType): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.from('calendar_event_types').upsert({
+      id: type.id,
+      module_id: type.moduleId,
+      code: type.code,
+      name: type.name,
+      color: type.color,
+      sort_order: type.sortOrder,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+
+  async delete(type: CalendarEventType): Promise<void> {
+    const supabase = createClient();
+    const { error: eventError } = await supabase
+      .from('calendar_events')
+      .update({ event_type: 'otro' })
+      .eq('module_id', type.moduleId)
+      .eq('event_type', type.code);
+    if (eventError) throw eventError;
+    const { error } = await supabase.from('calendar_event_types').delete().eq('id', type.id);
+    if (error) throw error;
   },
 };
 

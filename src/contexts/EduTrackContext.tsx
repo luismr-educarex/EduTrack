@@ -15,6 +15,7 @@ import {
   sessionLogService,
   tutoringService,
   calendarEventService,
+  calendarEventTypeService,
   foundationService,
   criterionGradingConfigService,
   criterionImplicationService,
@@ -33,6 +34,7 @@ import {
   SessionLog,
   TutoringAction,
   CalendarEvent,
+  CalendarEventType,
   CriterionGradingConfig,
   CriterionImplication,
   RubricItem,
@@ -62,6 +64,7 @@ interface EduTrackData {
   sessionLogs: SessionLog[];
   tutoringActions: TutoringAction[];
   calendarEvents: CalendarEvent[];
+  calendarEventTypes: CalendarEventType[];
   criterionGradingConfig: CriterionGradingConfig;
   criterionImplications: CriterionImplication[];
   rubricItems: RubricItem[];
@@ -74,6 +77,7 @@ interface EduTrackData {
   refreshSessionLogs: () => Promise<void>;
   refreshTutoringActions: () => Promise<void>;
   refreshCalendarEvents: () => Promise<void>;
+  refreshCalendarEventTypes: () => Promise<void>;
   refreshRARelationships: () => Promise<void>;
   refreshLearningOutcomes: () => Promise<void>;
   refreshCriteria: () => Promise<void>;
@@ -100,6 +104,7 @@ const EduTrackContext = createContext<EduTrackData>({
   sessionLogs: [],
   tutoringActions: [],
   calendarEvents: [],
+  calendarEventTypes: [],
   criterionGradingConfig: { moduleId: ACTIVE_MODULE_ID, ...DEFAULT_CRITERION_GRADING_CONFIG },
   criterionImplications: [],
   rubricItems: [],
@@ -111,6 +116,7 @@ const EduTrackContext = createContext<EduTrackData>({
   refreshSessionLogs: async () => {},
   refreshTutoringActions: async () => {},
   refreshCalendarEvents: async () => {},
+  refreshCalendarEventTypes: async () => {},
   refreshRARelationships: async () => {},
   refreshLearningOutcomes: async () => {},
   refreshCriteria: async () => {},
@@ -137,6 +143,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
   const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]);
   const [tutoringActions, setTutoringActions] = useState<TutoringAction[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarEventTypes, setCalendarEventTypes] = useState<CalendarEventType[]>([]);
   const [criterionGradingConfig, setCriterionGradingConfig] = useState<CriterionGradingConfig>({
     moduleId: ACTIVE_MODULE_ID,
     ...DEFAULT_CRITERION_GRADING_CONFIG,
@@ -216,6 +223,11 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
     setCalendarEvents(data);
   }, [activeModuleId]);
 
+  const refreshCalendarEventTypes = useCallback(async () => {
+    const data = await calendarEventTypeService.getByModule(activeModuleId);
+    setCalendarEventTypes(data);
+  }, [activeModuleId]);
+
   const refreshRARelationships = useCallback(async () => {
     const data = await raRelationshipService.getByModule(activeModuleId);
     setRARelationships(data);
@@ -271,6 +283,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
           slogs,
           tutors,
           cevents,
+          eventTypes,
           gradingConfig,
           implications,
           items,
@@ -289,6 +302,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
           sessionLogService.getByModule(activeModuleId),
           tutoringService.getAll(),
           calendarEventService.getByModule(activeModuleId),
+          calendarEventTypeService.getByModule(activeModuleId),
           criterionGradingConfigService.getByModule(activeModuleId),
           criterionImplicationService.getByModule(activeModuleId),
           rubricItemService.getByModule(activeModuleId),
@@ -307,6 +321,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         setSessionLogs(slogs);
         setTutoringActions(tutors);
         setCalendarEvents(cevents);
+        setCalendarEventTypes(eventTypes);
         setCriterionGradingConfig(
           gradingConfig ?? { moduleId: activeModuleId, ...DEFAULT_CRITERION_GRADING_CONFIG }
         );
@@ -343,6 +358,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         sessionLogs,
         tutoringActions,
         calendarEvents,
+        calendarEventTypes,
         criterionGradingConfig,
         criterionImplications,
         rubricItems,
@@ -354,6 +370,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         refreshSessionLogs,
         refreshTutoringActions,
         refreshCalendarEvents,
+        refreshCalendarEventTypes,
         refreshRARelationships,
         refreshLearningOutcomes,
         refreshCriteria,
