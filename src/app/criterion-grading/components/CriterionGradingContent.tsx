@@ -1050,29 +1050,27 @@ export default function CriterionGradingContent() {
       </div>
     );
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
+    <div className="w-full max-w-screen-2xl px-6 py-6 fade-in lg:px-8 xl:px-10 2xl:px-12">
       <PageHeader
         title="Sistema de calificación por criterios"
         subtitle="Rúbrica atómica, evidencias, implicaciones y cortes trazables"
       />
-      <div className="mx-auto max-w-6xl p-6">
-        <div className="mb-6 flex flex-wrap gap-1 rounded-xl bg-muted p-1">
-          {tabs.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium ${tab === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        {tab === 'config' && <ConfigPanel />}
-        {tab === 'implications' && <ImplicationsPanel />}
-        {tab === 'rubrics' && <RubricsPanel />}
-        {tab === 'grading' && <GradingPanel />}
-        {tab === 'planning' && <PlanningPanel />}
+      <div className="mb-5 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-lg bg-muted/40 p-1">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setTab(item.id)}
+            className={`rounded-md px-4 py-1.5 text-xs font-medium transition-all ${tab === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
+      {tab === 'config' && <ConfigPanel />}
+      {tab === 'implications' && <ImplicationsPanel />}
+      {tab === 'rubrics' && <RubricsPanel />}
+      {tab === 'grading' && <GradingPanel />}
+      {tab === 'planning' && <PlanningPanel />}
     </div>
   );
 }
