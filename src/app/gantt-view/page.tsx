@@ -1,7 +1,5 @@
-'use client';
-
-import { FeaturePage, GanttFeature } from '@/components/AddedCapabilities';
+import { redirect } from 'next/navigation';
 
 export default function GanttViewPage() {
-  return <FeaturePage title="Vista Gantt" description="Cronograma y seguimiento temporal de las actividades."><GanttFeature /></FeaturePage>;
+  redirect('/module-calendar?view=gantt');
 }
