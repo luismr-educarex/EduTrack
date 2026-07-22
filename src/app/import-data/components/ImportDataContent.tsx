@@ -1,8 +1,20 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { Upload, FileJson, CheckCircle, AlertCircle, X, ChevronDown, ChevronRight, Download, RefreshCw, Info } from 'lucide-react';
+import {
+  Upload,
+  FileJson,
+  CheckCircle,
+  AlertCircle,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  RefreshCw,
+  Info,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '@/components/ui/PageHeader';
+import ExcelBackupCard from './ExcelBackupCard';
 
 type ImportType = 'alumnos' | 'ra' | 'criterios' | 'unidades' | 'evaluaciones';
 
@@ -23,7 +35,13 @@ interface ImportState {
   evaluaciones: ImportResult | null;
 }
 
-const IMPORT_TYPES: { key: ImportType; label: string; description: string; color: string; schema: string }[] = [
+const IMPORT_TYPES: {
+  key: ImportType;
+  label: string;
+  description: string;
+  color: string;
+  schema: string;
+}[] = [
   {
     key: 'alumnos',
     label: 'Alumnos',
@@ -108,7 +126,11 @@ function validateAlumnos(data: unknown[]): { errors: string[]; warnings: string[
     if (!row.nia) errors.push(`Fila ${i + 1}: falta el campo "nia"`);
     if (!row.name) errors.push(`Fila ${i + 1}: falta el campo "name"`);
     if (!row.email) warnings.push(`Fila ${i + 1}: falta el campo "email" (opcional)`);
-    if (row.githubUrl && typeof row.githubUrl === 'string' && !row.githubUrl.startsWith('https://')) {
+    if (
+      row.githubUrl &&
+      typeof row.githubUrl === 'string' &&
+      !row.githubUrl.startsWith('https://')
+    ) {
       warnings.push(`Fila ${i + 1}: "githubUrl" debería comenzar con https://`);
     }
   });
@@ -138,7 +160,8 @@ function validateCriterios(data: unknown[]): { errors: string[]; warnings: strin
     if (!row.raCode) errors.push(`Fila ${i + 1}: falta el campo "raCode"`);
     if (!row.code) errors.push(`Fila ${i + 1}: falta el campo "code"`);
     if (!row.description) errors.push(`Fila ${i + 1}: falta el campo "description"`);
-    if (!row.difficulty) warnings.push(`Fila ${i + 1}: falta "difficulty" (básico/medio/avanzado), se usará "básico"`);
+    if (!row.difficulty)
+      warnings.push(`Fila ${i + 1}: falta "difficulty" (básico/medio/avanzado), se usará "básico"`);
     if (row.difficulty && !['básico', 'medio', 'avanzado'].includes(row.difficulty as string)) {
       warnings.push(`Fila ${i + 1}: "difficulty" debe ser "básico", "medio" o "avanzado"`);
     }
@@ -173,7 +196,10 @@ function validateEvaluaciones(data: unknown[]): { errors: string[]; warnings: st
   return { errors, warnings };
 }
 
-const VALIDATORS: Record<ImportType, (data: unknown[]) => { errors: string[]; warnings: string[] }> = {
+const VALIDATORS: Record<
+  ImportType,
+  (data: unknown[]) => { errors: string[]; warnings: string[] }
+> = {
   alumnos: validateAlumnos,
   ra: validateRA,
   criterios: validateCriterios,
@@ -184,13 +210,19 @@ const VALIDATORS: Record<ImportType, (data: unknown[]) => { errors: string[]; wa
 export default function ImportDataContent() {
   const [activeType, setActiveType] = useState<ImportType>('alumnos');
   const [jsonText, setJsonText] = useState('');
-  const [results, setResults] = useState<ImportState>({ alumnos: null, ra: null, criterios: null, unidades: null, evaluaciones: null });
+  const [results, setResults] = useState<ImportState>({
+    alumnos: null,
+    ra: null,
+    criterios: null,
+    unidades: null,
+    evaluaciones: null,
+  });
   const [showSchema, setShowSchema] = useState(false);
   const [expandedResult, setExpandedResult] = useState<ImportType | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activeConfig = IMPORT_TYPES.find(t => t.key === activeType)!;
+  const activeConfig = IMPORT_TYPES.find((t) => t.key === activeType)!;
 
   const processJSON = (text: string, type: ImportType) => {
     let parsed: unknown;
@@ -208,10 +240,11 @@ export default function ImportDataContent() {
     }
 
     const { errors, warnings } = VALIDATORS[type](data);
-    const status: ImportResult['status'] = errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'success';
+    const status: ImportResult['status'] =
+      errors.length > 0 ? 'error' : warnings.length > 0 ? 'warning' : 'success';
 
     const result: ImportResult = { type, status, count: data.length, errors, warnings, data };
-    setResults(prev => ({ ...prev, [type]: result }));
+    setResults((prev) => ({ ...prev, [type]: result }));
     setExpandedResult(type);
 
     if (status === 'success') {
@@ -224,14 +257,20 @@ export default function ImportDataContent() {
   };
 
   const handleImport = () => {
-    if (!jsonText.trim()) { toast.error('Pega el contenido JSON o carga un fichero'); return; }
+    if (!jsonText.trim()) {
+      toast.error('Pega el contenido JSON o carga un fichero');
+      return;
+    }
     processJSON(jsonText, activeType);
   };
 
   const handleFileLoad = (file: File) => {
-    if (!file.name.endsWith('.json')) { toast.error('Solo se admiten ficheros .json'); return; }
+    if (!file.name.endsWith('.json')) {
+      toast.error('Solo se admiten ficheros .json');
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = (e) => {
       const text = e.target?.result as string;
       setJsonText(text);
       processJSON(text, activeType);
@@ -264,18 +303,20 @@ export default function ImportDataContent() {
   };
 
   const clearResult = (type: ImportType) => {
-    setResults(prev => ({ ...prev, [type]: null }));
+    setResults((prev) => ({ ...prev, [type]: null }));
     if (expandedResult === type) setExpandedResult(null);
   };
 
-  const totalImported = Object.values(results).filter(r => r && r.status !== 'error').reduce((s, r) => s + (r?.count ?? 0), 0);
-  const totalErrors = Object.values(results).filter(r => r?.status === 'error').length;
+  const totalImported = Object.values(results)
+    .filter((r) => r && r.status !== 'error')
+    .reduce((s, r) => s + (r?.count ?? 0), 0);
+  const totalErrors = Object.values(results).filter((r) => r?.status === 'error').length;
 
   return (
     <div className="px-6 lg:px-8 xl:px-10 2xl:px-12 py-6 max-w-screen-2xl w-full fade-in">
       <PageHeader
-        title="Importar Datos"
-        subtitle="Importa alumnos, RA, criterios, unidades y evaluaciones desde ficheros JSON"
+        title="Importar y respaldar datos"
+        subtitle="Genera una copia de seguridad completa o importa datos académicos desde ficheros JSON"
         actions={
           <div className="flex items-center gap-2">
             {totalImported > 0 && (
@@ -292,6 +333,8 @@ export default function ImportDataContent() {
         }
       />
 
+      <ExcelBackupCard />
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left: Import panel */}
         <div className="xl:col-span-2 space-y-5">
@@ -299,9 +342,16 @@ export default function ImportDataContent() {
           <div className="bg-card rounded-xl border border-border shadow-card p-4">
             <p className="text-xs font-semibold text-foreground mb-3">Tipo de datos a importar</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-              {IMPORT_TYPES.map(t => (
-                <button key={t.key} onClick={() => { setActiveType(t.key); setJsonText(''); setShowSchema(false); }}
-                  className={`px-3 py-2.5 rounded-lg border text-xs font-medium transition-all text-left ${activeType === t.key ? t.color + ' shadow-sm' : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/60'}`}>
+              {IMPORT_TYPES.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => {
+                    setActiveType(t.key);
+                    setJsonText('');
+                    setShowSchema(false);
+                  }}
+                  className={`px-3 py-2.5 rounded-lg border text-xs font-medium transition-all text-left ${activeType === t.key ? t.color + ' shadow-sm' : 'bg-muted/30 border-border text-muted-foreground hover:bg-muted/60'}`}
+                >
                   <FileJson size={14} className="mb-1" />
                   {t.label}
                 </button>
@@ -317,12 +367,16 @@ export default function ImportDataContent() {
                 <p className="text-xs text-muted-foreground">{activeConfig.description}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={downloadTemplate}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground">
+                <button
+                  onClick={downloadTemplate}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground"
+                >
                   <Download size={12} /> Plantilla
                 </button>
-                <button onClick={() => setShowSchema(s => !s)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground">
+                <button
+                  onClick={() => setShowSchema((s) => !s)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground"
+                >
                   <Info size={12} /> Esquema
                 </button>
               </div>
@@ -330,22 +384,36 @@ export default function ImportDataContent() {
 
             {showSchema && (
               <div className="rounded-lg bg-muted/40 border border-border p-3">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Formato esperado</p>
-                <pre className="text-xs text-foreground font-mono overflow-x-auto scrollbar-thin whitespace-pre-wrap">{activeConfig.schema}</pre>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Formato esperado
+                </p>
+                <pre className="text-xs text-foreground font-mono overflow-x-auto scrollbar-thin whitespace-pre-wrap">
+                  {activeConfig.schema}
+                </pre>
               </div>
             )}
 
             {/* Drag & drop zone */}
             <div
-              onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleFileDrop}
               onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'}`}>
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'}`}
+            >
               <Upload size={24} className="mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium text-foreground">Arrastra un fichero .json aquí</p>
               <p className="text-xs text-muted-foreground mt-1">o haz clic para seleccionar</p>
-              <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
 
             <div className="flex items-center gap-3">
@@ -357,26 +425,32 @@ export default function ImportDataContent() {
             <div className="relative">
               <textarea
                 value={jsonText}
-                onChange={e => setJsonText(e.target.value)}
+                onChange={(e) => setJsonText(e.target.value)}
                 rows={10}
                 placeholder={`Pega aquí el JSON de ${activeConfig.label.toLowerCase()}...\n\nEjemplo:\n${activeConfig.schema}`}
                 className="w-full px-3 py-2.5 text-xs font-mono border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none scrollbar-thin"
               />
               {jsonText && (
-                <button onClick={() => setJsonText('')}
-                  className="absolute top-2 right-2 p-1 rounded hover:bg-muted text-muted-foreground transition-colors">
+                <button
+                  onClick={() => setJsonText('')}
+                  className="absolute top-2 right-2 p-1 rounded hover:bg-muted text-muted-foreground transition-colors"
+                >
                   <X size={12} />
                 </button>
               )}
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => setJsonText('')}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground">
+              <button
+                onClick={() => setJsonText('')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors text-muted-foreground"
+              >
                 <RefreshCw size={12} /> Limpiar
               </button>
-              <button onClick={handleImport}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 active:scale-95 transition-all">
+              <button
+                onClick={handleImport}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 active:scale-95 transition-all"
+              >
                 <Upload size={14} /> Importar {activeConfig.label}
               </button>
             </div>
@@ -388,34 +462,58 @@ export default function ImportDataContent() {
           <div className="bg-card rounded-xl border border-border shadow-card p-4">
             <p className="text-xs font-semibold text-foreground mb-3">Resumen de importaciones</p>
             <div className="space-y-2">
-              {IMPORT_TYPES.map(t => {
+              {IMPORT_TYPES.map((t) => {
                 const result = results[t.key];
                 return (
-                  <div key={t.key} className={`rounded-lg border p-3 transition-all ${result ? (result.status === 'success' ? 'border-green-200 bg-green-50' : result.status === 'warning' ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50') : 'border-border bg-muted/20'}`}>
+                  <div
+                    key={t.key}
+                    className={`rounded-lg border p-3 transition-all ${result ? (result.status === 'success' ? 'border-green-200 bg-green-50' : result.status === 'warning' ? 'border-amber-200 bg-amber-50' : 'border-red-200 bg-red-50') : 'border-border bg-muted/20'}`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         {result ? (
-                          result.status === 'success' ? <CheckCircle size={14} className="text-green-600 flex-shrink-0" /> :
-                          result.status === 'warning' ? <AlertCircle size={14} className="text-amber-600 flex-shrink-0" /> :
-                          <AlertCircle size={14} className="text-red-600 flex-shrink-0" />
+                          result.status === 'success' ? (
+                            <CheckCircle size={14} className="text-green-600 flex-shrink-0" />
+                          ) : result.status === 'warning' ? (
+                            <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+                          ) : (
+                            <AlertCircle size={14} className="text-red-600 flex-shrink-0" />
+                          )
                         ) : (
                           <div className="w-3.5 h-3.5 rounded-full border-2 border-border flex-shrink-0" />
                         )}
-                        <span className={`text-xs font-medium ${result ? (result.status === 'success' ? 'text-green-700' : result.status === 'warning' ? 'text-amber-700' : 'text-red-700') : 'text-muted-foreground'}`}>
+                        <span
+                          className={`text-xs font-medium ${result ? (result.status === 'success' ? 'text-green-700' : result.status === 'warning' ? 'text-amber-700' : 'text-red-700') : 'text-muted-foreground'}`}
+                        >
                           {t.label}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         {result && (
                           <>
-                            <span className={`text-[10px] font-semibold ${result.status === 'success' ? 'text-green-700' : result.status === 'warning' ? 'text-amber-700' : 'text-red-700'}`}>
-                              {result.status === 'error' ? `${result.errors.length} error(es)` : `${result.count} reg.`}
+                            <span
+                              className={`text-[10px] font-semibold ${result.status === 'success' ? 'text-green-700' : result.status === 'warning' ? 'text-amber-700' : 'text-red-700'}`}
+                            >
+                              {result.status === 'error'
+                                ? `${result.errors.length} error(es)`
+                                : `${result.count} reg.`}
                             </span>
-                            <button onClick={() => setExpandedResult(expandedResult === t.key ? null : t.key)}
-                              className="p-0.5 rounded hover:bg-black/5 transition-colors">
-                              {expandedResult === t.key ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                            <button
+                              onClick={() =>
+                                setExpandedResult(expandedResult === t.key ? null : t.key)
+                              }
+                              className="p-0.5 rounded hover:bg-black/5 transition-colors"
+                            >
+                              {expandedResult === t.key ? (
+                                <ChevronDown size={12} />
+                              ) : (
+                                <ChevronRight size={12} />
+                              )}
                             </button>
-                            <button onClick={() => clearResult(t.key)} className="p-0.5 rounded hover:bg-black/5 text-muted-foreground transition-colors">
+                            <button
+                              onClick={() => clearResult(t.key)}
+                              className="p-0.5 rounded hover:bg-black/5 text-muted-foreground transition-colors"
+                            >
                               <X size={12} />
                             </button>
                           </>
@@ -426,7 +524,9 @@ export default function ImportDataContent() {
                     {expandedResult === t.key && result && (
                       <div className="mt-2.5 space-y-1.5 border-t border-black/10 pt-2.5">
                         {result.status !== 'error' && (
-                          <p className="text-[10px] text-green-700 font-medium">{result.count} registro(s) procesado(s) correctamente</p>
+                          <p className="text-[10px] text-green-700 font-medium">
+                            {result.count} registro(s) procesado(s) correctamente
+                          </p>
                         )}
                         {result.errors.map((err, i) => (
                           <div key={i} className="flex items-start gap-1.5">
@@ -436,7 +536,10 @@ export default function ImportDataContent() {
                         ))}
                         {result.warnings.map((w, i) => (
                           <div key={i} className="flex items-start gap-1.5">
-                            <AlertCircle size={10} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle
+                              size={10}
+                              className="text-amber-600 flex-shrink-0 mt-0.5"
+                            />
                             <p className="text-[10px] text-amber-700 leading-relaxed">{w}</p>
                           </div>
                         ))}
@@ -455,12 +558,15 @@ export default function ImportDataContent() {
               <li>Selecciona el tipo de datos a importar</li>
               <li>Descarga la plantilla JSON para ver el formato</li>
               <li>Arrastra el fichero o pega el JSON</li>
-              <li>Haz clic en <strong className="text-foreground">Importar</strong></li>
+              <li>
+                Haz clic en <strong className="text-foreground">Importar</strong>
+              </li>
               <li>Revisa el resumen de resultados</li>
             </ol>
             <div className="mt-3 p-2.5 rounded-lg bg-blue-50 border border-blue-200">
               <p className="text-[10px] text-blue-700 leading-relaxed">
-                <strong>Nota:</strong> Los datos importados se validan antes de aplicarse. Los errores bloquean la importación; las advertencias son informativas.
+                <strong>Nota:</strong> Los datos importados se validan antes de aplicarse. Los
+                errores bloquean la importación; las advertencias son informativas.
               </p>
             </div>
           </div>

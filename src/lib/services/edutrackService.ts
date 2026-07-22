@@ -658,6 +658,28 @@ export const workUnitService = {
       throw e;
     }
   },
+
+  async moveToEvaluation(ut: WorkUnit, evaluationId: string, sortOrder: number): Promise<void> {
+    const supabase = createClient();
+    const previousEvaluationId = ut.evaluationId;
+    const { error: unitError } = await supabase
+      .from('work_units')
+      .update({ evaluation_id: evaluationId, sort_order: sortOrder })
+      .eq('id', ut.id);
+    if (unitError) throw unitError;
+
+    const { error: activityError } = await supabase
+      .from('activities')
+      .update({ evaluation_id: evaluationId })
+      .eq('unit_id', ut.id);
+    if (activityError) {
+      await supabase
+        .from('work_units')
+        .update({ evaluation_id: previousEvaluationId, sort_order: ut.sortOrder })
+        .eq('id', ut.id);
+      throw activityError;
+    }
+  },
 };
 
 // ─── ACTIVITIES ───────────────────────────────────────────────────────────────
