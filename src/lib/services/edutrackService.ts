@@ -15,6 +15,7 @@ export interface Module {
   code: string;
   cycle: string;
   course?: string;
+  deliveryMode: 'in_person' | 'online';
   evaluationCount: number;
   totalStudents: number;
 }
@@ -296,6 +297,7 @@ export const moduleService = {
         code: r.code,
         cycle: r.cycle,
         course: r.course,
+        deliveryMode: r.delivery_mode === 'online' ? 'online' : 'in_person',
         evaluationCount: r.evaluation_count,
         totalStudents: r.total_students,
       }));
@@ -316,6 +318,7 @@ export const moduleService = {
           code: module.code,
           cycle: module.cycle,
           course: module.course,
+          delivery_mode: module.deliveryMode,
           evaluation_count: module.evaluationCount,
           total_students: module.totalStudents,
         },
@@ -333,6 +336,7 @@ export const moduleService = {
       code: data.code,
       cycle: data.cycle,
       course: data.course,
+      deliveryMode: data.delivery_mode === 'online' ? 'online' : 'in_person',
       evaluationCount: data.evaluation_count,
       totalStudents: data.total_students,
     };
