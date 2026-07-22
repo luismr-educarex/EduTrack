@@ -24,7 +24,6 @@ import {
   Activity,
   BookOpenText,
   CalendarDays,
-  GanttChartSquare,
   Armchair,
   Bot,
   GraduationCap,
@@ -117,12 +116,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Calendario',
     href: '/module-calendar',
     icon: <CalendarDays size={18} />,
-  },
-  {
-    key: 'nav-gantt',
-    label: 'Vista Gantt',
-    href: '/gantt-view',
-    icon: <GanttChartSquare size={18} />,
   },
   { key: 'nav-seating', label: 'Aula', href: '/seating', icon: <Armchair size={18} /> },
   {

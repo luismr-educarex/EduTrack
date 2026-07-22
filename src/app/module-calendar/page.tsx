@@ -1,7 +1,10 @@
-'use client';
+import CalendarWorkspace from './components/CalendarWorkspace';
 
-import { CalendarFeature, FeaturePage } from '@/components/AddedCapabilities';
-
-export default function ModuleCalendarPage() {
-  return <FeaturePage title="Calendario del módulo" description="Fechas académicas, entregas, exámenes y reuniones del módulo activo."><CalendarFeature /></FeaturePage>;
+export default async function ModuleCalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  return <CalendarWorkspace initialView={params.view === 'gantt' ? 'gantt' : 'calendar'} />;
 }
