@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import {
   LayoutDashboard,
@@ -29,11 +29,6 @@ import {
   GraduationCap,
   FolderGit2 as Github,
   Scale,
-  History,
-  SlidersHorizontal,
-  Network,
-  PenSquare,
-  Laptop,
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,7 +42,7 @@ interface NavItem {
   children?: NavItem[];
 }
 
-const IN_PERSON_NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS: NavItem[] = [
   { key: 'nav-dashboard', label: 'Dashboard', href: '/', icon: <LayoutDashboard size={18} /> },
   {
     key: 'nav-planning',
@@ -143,27 +138,12 @@ const IN_PERSON_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const ONLINE_NAV_ITEMS: NavItem[] = [
-  { key: 'online-dashboard', label: 'Dashboard', href: '/', icon: <LayoutDashboard size={18} /> },
-  { key: 'online-students', label: 'Alumnos', href: '/students-tutoring', icon: <Users size={18} /> },
-  { key: 'online-activities', label: 'Actividades', href: '/activities', icon: <ClipboardList size={18} /> },
-  { key: 'online-ai-evaluation', label: 'Evaluación IA', href: '/corrections', icon: <Bot size={18} /> },
-  { key: 'online-manual-evaluation', label: 'Eval. Manual', href: '/grading', icon: <PenSquare size={18} /> },
-  { key: 'online-history', label: 'Historial', href: '/reports', icon: <History size={18} /> },
-  { key: 'online-calibration', label: 'Calibración', href: '/criterion-grading', icon: <SlidersHorizontal size={18} /> },
-  { key: 'online-architecture', label: 'Arquitectura', href: '/evaluation-map', icon: <Network size={18} /> },
-  { key: 'online-settings', label: 'Configuración', href: '/course-management', icon: <Settings size={18} /> },
-];
-
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { activeModule, modules, setActiveModuleId } = useEduTrack();
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [moduleOpen, setModuleOpen] = useState(false);
-  const isOnlineModule = activeModule?.deliveryMode === 'online';
-  const navItems = isOnlineModule ? ONLINE_NAV_ITEMS : IN_PERSON_NAV_ITEMS;
 
   // Auto-expand planning section if on a child route
   const planningChildPaths = [
@@ -233,7 +213,7 @@ export default function Sidebar() {
                   {activeModule?.code ?? 'Módulo'}
                 </span>
                 <span className="text-[10px] text-muted-foreground block truncate">
-                  {activeModule ? `${activeModule.cycle} · ${isOnlineModule ? 'Online' : 'Presencial'}` : 'Cargando…'}
+                  {activeModule?.cycle ?? 'Cargando…'}
                 </span>
               </div>
               <ChevronRight
@@ -251,14 +231,10 @@ export default function Sidebar() {
                     onClick={() => {
                       setActiveModuleId(mod.id);
                       setModuleOpen(false);
-                      router.push('/');
                     }}
                   >
                     <span className="text-xs font-semibold w-8 flex-shrink-0">{mod.code}</span>
                     <span className="text-xs truncate">{mod.name}</span>
-                    {mod.deliveryMode === 'online' && (
-                      <Laptop size={12} className="ml-auto flex-shrink-0 text-primary" aria-label="Online" />
-                    )}
                   </button>
                 ))}
               </div>
@@ -270,11 +246,11 @@ export default function Sidebar() {
         <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin">
           {!collapsed && (
             <p className="px-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              {isOnlineModule ? 'EduCode · Online' : 'Navegación presencial'}
+              Navegación
             </p>
           )}
           <ul className="space-y-0.5 px-2">
-            {navItems.map((item) => {
+            {NAV_ITEMS.map((item) => {
               const active = isActive(item.href);
 
               // Render planning item with collapsible children
