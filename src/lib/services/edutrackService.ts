@@ -307,7 +307,7 @@ export const moduleService = {
     }
   },
 
-  async upsert(module: Module): Promise<Module | null> {
+  async upsert(module: Module): Promise<Module> {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('modules')
@@ -326,10 +326,7 @@ export const moduleService = {
       )
       .select()
       .single();
-    if (error) {
-      if (isSchemaError(error)) throw error;
-      return null;
-    }
+    assertRequest(error, 'No se pudo guardar el módulo');
     return {
       id: data.id,
       name: data.name,
