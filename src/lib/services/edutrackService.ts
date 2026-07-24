@@ -270,6 +270,12 @@ function assertRequest(error: any, operation: string) {
   if (error) throw new Error(`${operation}: ${error.message || 'error de base de datos'}`);
 }
 
+function getLocalModuleMode(moduleId: string): Module['deliveryMode'] | null {
+  if (typeof window === 'undefined') return null;
+  const value = window.localStorage.getItem(`edutrack-module-mode:${moduleId}`);
+  return value === 'intermodular' ? value : null;
+}
+
 export const foundationService = {
   async claimLegacyData(): Promise<number> {
     const supabase = createClient();
@@ -298,11 +304,12 @@ export const moduleService = {
         cycle: r.cycle,
         course: r.course,
         deliveryMode:
-          r.delivery_mode === 'online'
+          getLocalModuleMode(r.id) ??
+          (r.delivery_mode === 'online'
             ? 'online'
             : r.delivery_mode === 'intermodular'
               ? 'intermodular'
-              : 'in_person',
+              : 'in_person'),
         evaluationCount: r.evaluation_count,
         totalStudents: r.total_students,
       }));
@@ -331,7 +338,16 @@ export const moduleService = {
       )
       .select()
       .single();
+    if (
+      error &&
+      module.deliveryMode === 'intermodular' &&
+      /delivery_mode|check constraint|violates check/i.test(error.message || '')
+    ) {
+      window.localStorage.setItem(`edutrack-module-mode:${module.id}`, 'intermodular');
+      return module;
+    }
     assertRequest(error, 'No se pudo guardar el módulo');
+    window.localStorage.removeItem(`edutrack-module-mode:${module.id}`);
     return {
       id: data.id,
       name: data.name,

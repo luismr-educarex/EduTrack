@@ -58,6 +58,29 @@ function assertRequest(error: { message?: string } | null, operation: string) {
   if (error) throw new Error(`${operation}: ${error.message || 'error de base de datos'}`);
 }
 
+function isMissingProjectSchema(error: { message?: string; code?: string } | null) {
+  return Boolean(
+    error &&
+    (/project_(deliveries|corrections|observations)|schema cache|does not exist/i.test(
+      error.message || ''
+    ) ||
+      error.code === '42P01')
+  );
+}
+
+function readLocal<T>(collection: string): T[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(`edutrack:${collection}`) || '[]') as T[];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocal<T>(collection: string, items: T[]) {
+  window.localStorage.setItem(`edutrack:${collection}`, JSON.stringify(items));
+}
+
 function mapDelivery(row: any): ProjectDelivery {
   return {
     id: row.id,
@@ -100,6 +123,11 @@ export const projectDeliveryService = {
       .select('*')
       .eq('module_id', moduleId)
       .order('sort_order');
+    if (isMissingProjectSchema(error)) {
+      return readLocal<ProjectDelivery>('project-deliveries')
+        .filter((item) => item.moduleId === moduleId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    }
     assertRequest(error, 'No se pudieron cargar las entregas');
     return (data || []).map(mapDelivery);
   },
@@ -125,12 +153,32 @@ export const projectDeliveryService = {
       .upsert(payload)
       .select()
       .single();
+    if (isMissingProjectSchema(error)) {
+      const items = readLocal<ProjectDelivery>('project-deliveries');
+      const saved: ProjectDelivery = {
+        ...delivery,
+        id: delivery.id || crypto.randomUUID(),
+      };
+      writeLocal('project-deliveries', [...items.filter((item) => item.id !== saved.id), saved]);
+      return saved;
+    }
     assertRequest(error, 'No se pudo guardar la entrega');
     return mapDelivery(data);
   },
 
   async delete(id: string): Promise<void> {
     const { error } = await createClient().from('project_deliveries').delete().eq('id', id);
+    if (isMissingProjectSchema(error)) {
+      writeLocal(
+        'project-deliveries',
+        readLocal<ProjectDelivery>('project-deliveries').filter((item) => item.id !== id)
+      );
+      writeLocal(
+        'project-corrections',
+        readLocal<ProjectCorrection>('project-corrections').filter((item) => item.deliveryId !== id)
+      );
+      return;
+    }
     assertRequest(error, 'No se pudo eliminar la entrega');
   },
 };
@@ -142,6 +190,11 @@ export const projectCorrectionService = {
       .select('*')
       .eq('module_id', moduleId)
       .eq('call', call);
+    if (isMissingProjectSchema(error)) {
+      return readLocal<ProjectCorrection>('project-corrections').filter(
+        (item) => item.moduleId === moduleId && item.call === call
+      );
+    }
     assertRequest(error, 'No se pudieron cargar las correcciones');
     return (data || []).map(mapCorrection);
   },
@@ -172,6 +225,31 @@ export const projectCorrectionService = {
       )
       .select()
       .single();
+    if (isMissingProjectSchema(error)) {
+      const items = readLocal<ProjectCorrection>('project-corrections');
+      const previous = items.find(
+        (item) =>
+          item.deliveryId === correction.deliveryId &&
+          item.studentId === correction.studentId &&
+          item.call === correction.call
+      );
+      const saved: ProjectCorrection = {
+        ...correction,
+        id: correction.id || previous?.id || crypto.randomUUID(),
+      };
+      writeLocal('project-corrections', [
+        ...items.filter(
+          (item) =>
+            !(
+              item.deliveryId === saved.deliveryId &&
+              item.studentId === saved.studentId &&
+              item.call === saved.call
+            )
+        ),
+        saved,
+      ]);
+      return saved;
+    }
     assertRequest(error, 'No se pudo guardar la corrección');
     return mapCorrection(data);
   },
@@ -184,6 +262,11 @@ export const projectObservationService = {
       .select('*')
       .eq('module_id', moduleId)
       .order('observation_date', { ascending: false });
+    if (isMissingProjectSchema(error)) {
+      return readLocal<ProjectObservation>('project-observations')
+        .filter((item) => item.moduleId === moduleId)
+        .sort((a, b) => b.date.localeCompare(a.date));
+    }
     assertRequest(error, 'No se pudieron cargar las observaciones');
     return (data || []).map((row) => ({
       id: row.id,
@@ -209,6 +292,17 @@ export const projectObservationService = {
       })
       .select()
       .single();
+    if (isMissingProjectSchema(error)) {
+      const created: ProjectObservation = {
+        ...observation,
+        id: crypto.randomUUID(),
+      };
+      writeLocal('project-observations', [
+        created,
+        ...readLocal<ProjectObservation>('project-observations'),
+      ]);
+      return created;
+    }
     assertRequest(error, 'No se pudo guardar la observación');
     return {
       id: data.id,
@@ -223,6 +317,13 @@ export const projectObservationService = {
 
   async delete(id: string): Promise<void> {
     const { error } = await createClient().from('project_observations').delete().eq('id', id);
+    if (isMissingProjectSchema(error)) {
+      writeLocal(
+        'project-observations',
+        readLocal<ProjectObservation>('project-observations').filter((item) => item.id !== id)
+      );
+      return;
+    }
     assertRequest(error, 'No se pudo eliminar la observación');
   },
 };
