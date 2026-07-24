@@ -269,8 +269,23 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         setError(null);
         await foundationService.claimLegacyData();
+        const mods = await moduleService.getAll();
+        const resolvedModuleId = mods.some((module) => module.id === activeModuleId)
+          ? activeModuleId
+          : (mods[0]?.id ?? '');
+
+        if (resolvedModuleId !== activeModuleId) {
+          setModules(mods);
+          if (resolvedModuleId) {
+            setActiveModuleIdState(resolvedModuleId);
+            window.localStorage.setItem('edutrack-active-module', resolvedModuleId);
+          } else {
+            window.localStorage.removeItem('edutrack-active-module');
+          }
+          return;
+        }
+
         const [
-          mods,
           evals,
           los,
           crit,
@@ -289,24 +304,23 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
           items,
           itemGrades,
         ] = await Promise.all([
-          moduleService.getAll(),
-          evaluationService.getByModule(activeModuleId),
-          learningOutcomeService.getByModule(activeModuleId),
-          criterionService.getByModule(activeModuleId),
-          workUnitService.getByModule(activeModuleId),
-          activityService.getByModule(activeModuleId),
-          studentService.getByModule(activeModuleId),
-          gradeService.getByModule(activeModuleId),
-          raRelationshipService.getByModule(activeModuleId),
+          evaluationService.getByModule(resolvedModuleId),
+          learningOutcomeService.getByModule(resolvedModuleId),
+          criterionService.getByModule(resolvedModuleId),
+          workUnitService.getByModule(resolvedModuleId),
+          activityService.getByModule(resolvedModuleId),
+          studentService.getByModule(resolvedModuleId),
+          gradeService.getByModule(resolvedModuleId),
+          raRelationshipService.getByModule(resolvedModuleId),
           incidentService.getAll(),
-          sessionLogService.getByModule(activeModuleId),
+          sessionLogService.getByModule(resolvedModuleId),
           tutoringService.getAll(),
-          calendarEventService.getByModule(activeModuleId),
-          calendarEventTypeService.getByModule(activeModuleId),
-          criterionGradingConfigService.getByModule(activeModuleId),
-          criterionImplicationService.getByModule(activeModuleId),
-          rubricItemService.getByModule(activeModuleId),
-          rubricItemGradeService.getByModule(activeModuleId),
+          calendarEventService.getByModule(resolvedModuleId),
+          calendarEventTypeService.getByModule(resolvedModuleId),
+          criterionGradingConfigService.getByModule(resolvedModuleId),
+          criterionImplicationService.getByModule(resolvedModuleId),
+          rubricItemService.getByModule(resolvedModuleId),
+          rubricItemGradeService.getByModule(resolvedModuleId),
         ]);
         setModules(mods);
         setEvaluations(evals);
@@ -323,7 +337,7 @@ export function EduTrackProvider({ children }: { children: React.ReactNode }) {
         setCalendarEvents(cevents);
         setCalendarEventTypes(eventTypes);
         setCriterionGradingConfig(
-          gradingConfig ?? { moduleId: activeModuleId, ...DEFAULT_CRITERION_GRADING_CONFIG }
+          gradingConfig ?? { moduleId: resolvedModuleId, ...DEFAULT_CRITERION_GRADING_CONFIG }
         );
         setCriterionImplications(implications);
         setRubricItems(items);

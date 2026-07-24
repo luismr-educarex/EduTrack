@@ -251,21 +251,6 @@ export interface RubricItemGrade {
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-function isSchemaError(error: any): boolean {
-  if (!error) return false;
-  if (error.code && typeof error.code === 'string') {
-    const cls = error.code.substring(0, 2);
-    if (cls === '42' || cls === '08') return true;
-    if (cls === '23') return false;
-  }
-  if (error.message) {
-    return /relation.*does not exist|column.*does not exist|function.*does not exist|syntax error/i.test(
-      error.message
-    );
-  }
-  return false;
-}
-
 function assertRequest(error: any, operation: string) {
   if (error) throw new Error(`${operation}: ${error.message || 'error de base de datos'}`);
 }
@@ -293,10 +278,7 @@ export const moduleService = {
     const supabase = createClient();
     try {
       const { data, error } = await supabase.from('modules').select('*').order('code');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los módulos');
       return (data || []).map((r) => ({
         id: r.id,
         name: r.name,
@@ -321,45 +303,51 @@ export const moduleService = {
 
   async upsert(module: Module): Promise<Module> {
     const supabase = createClient();
-    const { data, error } = await supabase
+    const payload = {
+      id: module.id,
+      name: module.name,
+      code: module.code,
+      cycle: module.cycle,
+      course: module.course,
+      delivery_mode: module.deliveryMode,
+      evaluation_count: module.evaluationCount,
+      total_students: module.totalStudents,
+    };
+    let { data, error } = await supabase
       .from('modules')
-      .upsert(
-        {
-          id: module.id,
-          name: module.name,
-          code: module.code,
-          cycle: module.cycle,
-          course: module.course,
-          delivery_mode: module.deliveryMode,
-          evaluation_count: module.evaluationCount,
-          total_students: module.totalStudents,
-        },
-        { onConflict: 'id' }
-      )
+      .upsert(payload, { onConflict: 'id' })
       .select()
       .single();
+
+    // Older databases may not yet accept "intermodular". Persist the module
+    // with a supported value before keeping the mode locally; never report a
+    // successful creation for a row that does not exist.
     if (
       error &&
       module.deliveryMode === 'intermodular' &&
       /delivery_mode|check constraint|violates check/i.test(error.message || '')
     ) {
+      const fallback = await supabase
+        .from('modules')
+        .upsert({ ...payload, delivery_mode: 'in_person' }, { onConflict: 'id' })
+        .select()
+        .single();
+      assertRequest(fallback.error, 'No se pudo guardar el módulo');
+      data = fallback.data;
+      error = null;
       window.localStorage.setItem(`edutrack-module-mode:${module.id}`, 'intermodular');
-      return module;
+    } else {
+      assertRequest(error, 'No se pudo guardar el módulo');
+      window.localStorage.removeItem(`edutrack-module-mode:${module.id}`);
     }
-    assertRequest(error, 'No se pudo guardar el módulo');
-    window.localStorage.removeItem(`edutrack-module-mode:${module.id}`);
+
     return {
       id: data.id,
       name: data.name,
       code: data.code,
       cycle: data.cycle,
       course: data.course,
-      deliveryMode:
-        data.delivery_mode === 'online'
-          ? 'online'
-          : data.delivery_mode === 'intermodular'
-            ? 'intermodular'
-            : 'in_person',
+      deliveryMode: module.deliveryMode,
       evaluationCount: data.evaluation_count,
       totalStudents: data.total_students,
     };
@@ -368,9 +356,8 @@ export const moduleService = {
   async delete(id: string): Promise<void> {
     const supabase = createClient();
     const { error } = await supabase.from('modules').delete().eq('id', id);
-    if (error) {
-      if (isSchemaError(error)) throw error;
-    }
+    assertRequest(error, 'No se pudo eliminar el módulo');
+    window.localStorage.removeItem(`edutrack-module-mode:${id}`);
   },
 };
 
@@ -384,10 +371,7 @@ export const evaluationService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('start_date');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las evaluaciones');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -414,10 +398,7 @@ export const learningOutcomeService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('sort_order');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los resultados de aprendizaje');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -452,10 +433,7 @@ export const learningOutcomeService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar el resultado de aprendizaje');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -474,9 +452,7 @@ export const learningOutcomeService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('learning_outcomes').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar el resultado de aprendizaje');
     } catch (e: any) {
       console.error('learningOutcomeService.delete:', e.message);
       throw e;
@@ -494,10 +470,7 @@ export const criterionService = {
         .select('*, learning_outcomes!inner(module_id)')
         .eq('learning_outcomes.module_id', moduleId)
         .order('sort_order');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los criterios');
       return (data || []).map((r) => ({
         id: r.id,
         raId: r.ra_id,
@@ -521,10 +494,7 @@ export const criterionService = {
         .select('*')
         .eq('ra_id', raId)
         .order('sort_order');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los criterios');
       return (data || []).map((r) => ({
         id: r.id,
         raId: r.ra_id,
@@ -561,10 +531,7 @@ export const criterionService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar el criterio');
       return {
         id: data.id,
         raId: data.ra_id,
@@ -584,9 +551,7 @@ export const criterionService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('criteria').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar el criterio');
     } catch (e: any) {
       console.error('criterionService.delete:', e.message);
       throw e;
@@ -604,10 +569,7 @@ export const workUnitService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('sort_order');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las unidades de trabajo');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -650,10 +612,7 @@ export const workUnitService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar la unidad de trabajo');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -677,9 +636,7 @@ export const workUnitService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('work_units').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar la unidad de trabajo');
     } catch (e: any) {
       console.error('workUnitService.delete:', e.message);
       throw e;
@@ -693,18 +650,23 @@ export const workUnitService = {
       .from('work_units')
       .update({ evaluation_id: evaluationId, sort_order: sortOrder })
       .eq('id', ut.id);
-    if (unitError) throw unitError;
+    assertRequest(unitError, 'No se pudo mover la unidad de evaluación');
 
     const { error: activityError } = await supabase
       .from('activities')
       .update({ evaluation_id: evaluationId })
       .eq('unit_id', ut.id);
     if (activityError) {
-      await supabase
+      const { error: rollbackError } = await supabase
         .from('work_units')
         .update({ evaluation_id: previousEvaluationId, sort_order: ut.sortOrder })
         .eq('id', ut.id);
-      throw activityError;
+      if (rollbackError) {
+        throw new Error(
+          `No se pudieron mover las actividades y tampoco revertir la unidad: ${rollbackError.message}`
+        );
+      }
+      assertRequest(activityError, 'No se pudieron mover las actividades de la unidad');
     }
   },
 };
@@ -719,10 +681,7 @@ export const activityService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('due_date');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las actividades');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -773,10 +732,7 @@ export const activityService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar la actividad');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -804,9 +760,7 @@ export const activityService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('activities').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar la actividad');
     } catch (e: any) {
       console.error('activityService.delete:', e.message);
       throw e;
@@ -824,10 +778,7 @@ export const studentService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('name');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudo cargar el alumnado');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -882,10 +833,7 @@ export const studentService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar el alumno');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -921,10 +869,7 @@ export const gradeService = {
         .from('activity_grades')
         .select('*, activities!inner(module_id)')
         .eq('activities.module_id', moduleId);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las calificaciones');
       return (data || []).map((r) => ({
         id: r.id,
         studentId: r.student_id,
@@ -949,9 +894,7 @@ export const gradeService = {
         },
         { onConflict: 'student_id,activity_id' }
       );
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo guardar la calificación');
     } catch (e: any) {
       console.error('gradeService.upsertGrade:', e.message);
       throw e;
@@ -968,10 +911,7 @@ export const raRelationshipService = {
         .from('ra_relationships')
         .select('*')
         .eq('module_id', moduleId);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las relaciones entre RA');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -1004,10 +944,7 @@ export const raRelationshipService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar la relación entre RA');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -1026,9 +963,7 @@ export const raRelationshipService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('ra_relationships').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar la relación entre RA');
     } catch (e: any) {
       console.error('raRelationshipService.delete:', e.message);
       throw e;
@@ -1047,7 +982,7 @@ export const criterionGradingConfigService = {
       .order('academic_year', { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (error) return null;
+    assertRequest(error, 'No se pudo cargar la configuración de calificación');
     return data
       ? {
           moduleId: data.module_id,
@@ -1088,7 +1023,7 @@ export const criterionGradingConfigService = {
       },
       { onConflict: 'module_id,academic_year' }
     );
-    if (error) throw error;
+    assertRequest(error, 'No se pudo guardar la configuración de calificación');
   },
 };
 
@@ -1100,7 +1035,7 @@ export const criterionImplicationService = {
       .select('*')
       .eq('module_id', moduleId)
       .order('created_at');
-    if (error) return [];
+    assertRequest(error, 'No se pudieron cargar las implicaciones entre criterios');
     return (data || []).map((row) => ({
       id: row.id,
       moduleId: row.module_id,
@@ -1126,13 +1061,13 @@ export const criterionImplicationService = {
     const { error } = await supabase
       .from('criterion_implications')
       .upsert(payload, { onConflict: 'id' });
-    if (error) throw error;
+    assertRequest(error, 'No se pudo guardar la implicación entre criterios');
   },
 
   async delete(id: string): Promise<void> {
     const supabase = createClient();
     const { error } = await supabase.from('criterion_implications').delete().eq('id', id);
-    if (error) throw error;
+    assertRequest(error, 'No se pudo eliminar la implicación entre criterios');
   },
 };
 
@@ -1147,7 +1082,7 @@ export const criterionGraphImportService = {
       .from('learning_outcomes')
       .select('id,code')
       .eq('module_id', moduleId);
-    if (outcomesError) throw outcomesError;
+    assertRequest(outcomesError, 'No se pudieron cargar los resultados para importar el grafo');
     const outcomeByCode = new Map((outcomes ?? []).map((row) => [row.code, row.id]));
     const criteriaPayload = graph.criteria.map((criterion, index) => {
       const raId = outcomeByCode.get(criterion.ra);
@@ -1166,7 +1101,7 @@ export const criterionGraphImportService = {
     const { error: criteriaError } = await supabase
       .from('criteria')
       .upsert(criteriaPayload, { onConflict: 'id' });
-    if (criteriaError) throw criteriaError;
+    assertRequest(criteriaError, 'No se pudieron guardar los criterios importados');
     const implicationPayload = graph.implications.map((edge) => ({
       module_id: moduleId,
       source_criterion_id: edge.sourceCriterionId,
@@ -1179,7 +1114,7 @@ export const criterionGraphImportService = {
       const { error } = await supabase.from('criterion_implications').upsert(implicationPayload, {
         onConflict: 'module_id,source_criterion_id,target_criterion_id',
       });
-      if (error) throw error;
+      assertRequest(error, 'No se pudo importar el grafo de calificación');
     }
     if (graph.rejections.length) {
       const { error } = await supabase.from('grading_graph_rejections').upsert(
@@ -1190,7 +1125,7 @@ export const criterionGraphImportService = {
         })),
         { onConflict: 'module_id,payload' }
       );
-      if (error) throw error;
+      assertRequest(error, 'No se pudieron registrar los rechazos del grafo');
     }
     return {
       criteria: graph.criteria.length,
@@ -1223,7 +1158,7 @@ export const activityTemplateService = {
       })),
       { onConflict: 'id' }
     );
-    if (error) throw error;
+    assertRequest(error, 'No se pudo importar el banco de plantillas');
     return templates.length;
   },
 
@@ -1236,7 +1171,7 @@ export const activityTemplateService = {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
-    if (error) throw error;
+    assertRequest(error, 'No se pudo actualizar la plantilla');
   },
 };
 
@@ -1248,7 +1183,7 @@ export const rubricItemService = {
       .select('*, activities!inner(module_id)')
       .eq('activities.module_id', moduleId)
       .order('sort_order');
-    if (error) return [];
+    assertRequest(error, 'No se pudieron cargar los elementos de rúbrica');
     return (data || []).map((row) => ({
       id: row.id,
       activityId: row.activity_id,
@@ -1275,13 +1210,13 @@ export const rubricItemService = {
     };
     if (item.id) payload.id = item.id;
     const { error } = await supabase.from('rubric_items').upsert(payload, { onConflict: 'id' });
-    if (error) throw error;
+    assertRequest(error, 'No se pudo guardar el elemento de rúbrica');
   },
 
   async delete(id: string): Promise<void> {
     const supabase = createClient();
     const { error } = await supabase.from('rubric_items').delete().eq('id', id);
-    if (error) throw error;
+    assertRequest(error, 'No se pudo eliminar el elemento de rúbrica');
   },
 };
 
@@ -1292,7 +1227,7 @@ export const rubricItemGradeService = {
       .from('rubric_item_grades')
       .select('*, rubric_items!inner(activities!inner(module_id))')
       .eq('rubric_items.activities.module_id', moduleId);
-    if (error) return [];
+    assertRequest(error, 'No se pudieron cargar las calificaciones de rúbrica');
     return (data || []).map((row) => ({
       id: row.id,
       studentId: row.student_id,
@@ -1322,7 +1257,7 @@ export const rubricItemGradeService = {
       },
       { onConflict: 'student_id,item_id' }
     );
-    if (error) throw error;
+    assertRequest(error, 'No se pudo guardar la calificación de rúbrica');
   },
 };
 
@@ -1335,10 +1270,7 @@ export const incidentService = {
         .from('incidents')
         .select('*')
         .order('incident_date', { ascending: false });
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las incidencias');
       return (data || []).map((r) => ({
         id: r.id,
         studentId: r.student_id,
@@ -1371,10 +1303,7 @@ export const incidentService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar la incidencia');
       return {
         id: data.id,
         studentId: data.student_id,
@@ -1393,9 +1322,7 @@ export const incidentService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('incidents').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar la incidencia');
     } catch (e: any) {
       console.error('incidentService.delete:', e.message);
       throw e;
@@ -1413,10 +1340,7 @@ export const sessionLogService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('log_date', { ascending: false });
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los registros de sesión');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -1451,10 +1375,7 @@ export const sessionLogService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar el registro de sesión');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -1474,9 +1395,7 @@ export const sessionLogService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('session_logs').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar el registro de sesión');
     } catch (e: any) {
       console.error('sessionLogService.delete:', e.message);
       throw e;
@@ -1493,10 +1412,7 @@ export const tutoringService = {
         .from('tutoring_actions')
         .select('*')
         .order('action_date', { ascending: false });
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar las acciones de tutoría');
       return (data || []).map((r) => ({
         id: r.id,
         studentId: r.student_id,
@@ -1529,10 +1445,7 @@ export const tutoringService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar la acción de tutoría');
       return {
         id: data.id,
         studentId: data.student_id,
@@ -1551,9 +1464,7 @@ export const tutoringService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('tutoring_actions').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar la acción de tutoría');
     } catch (e: any) {
       console.error('tutoringService.delete:', e.message);
       throw e;
@@ -1571,10 +1482,7 @@ export const calendarEventService = {
         .select('*')
         .eq('module_id', moduleId)
         .order('event_date');
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return [];
-      }
+      assertRequest(error, 'No se pudieron cargar los eventos del calendario');
       return (data || []).map((r) => ({
         id: r.id,
         moduleId: r.module_id,
@@ -1607,10 +1515,7 @@ export const calendarEventService = {
         )
         .select()
         .single();
-      if (error) {
-        if (isSchemaError(error)) throw error;
-        return null;
-      }
+      assertRequest(error, 'No se pudo guardar el evento del calendario');
       return {
         id: data.id,
         moduleId: data.module_id,
@@ -1629,9 +1534,7 @@ export const calendarEventService = {
     const supabase = createClient();
     try {
       const { error } = await supabase.from('calendar_events').delete().eq('id', id);
-      if (error) {
-        if (isSchemaError(error)) throw error;
-      }
+      assertRequest(error, 'No se pudo eliminar el evento del calendario');
     } catch (e: any) {
       console.error('calendarEventService.delete:', e.message);
       throw e;
@@ -1659,11 +1562,10 @@ export const calendarEventTypeService = {
         .eq('module_id', moduleId)
         .order('sort_order');
 
-    let { data, error } = await read();
-    if (error) {
-      if (isSchemaError(error)) throw error;
-      return [];
-    }
+    const initial = await read();
+    let data = initial.data;
+    const error = initial.error;
+    assertRequest(error, 'No se pudieron cargar los tipos de evento');
     if (!data?.length) {
       const defaults = DEFAULT_CALENDAR_EVENT_TYPES.map((type) => ({
         id: `${moduleId}-calendar-type-${type.code}`,
@@ -1674,7 +1576,7 @@ export const calendarEventTypeService = {
         sort_order: type.sortOrder,
       }));
       const seeded = await supabase.from('calendar_event_types').upsert(defaults).select('*');
-      if (seeded.error) throw seeded.error;
+      assertRequest(seeded.error, 'No se pudieron crear los tipos de evento predeterminados');
       data = seeded.data;
     }
     return (data || []).map((row) => ({
@@ -1698,7 +1600,7 @@ export const calendarEventTypeService = {
       sort_order: type.sortOrder,
       updated_at: new Date().toISOString(),
     });
-    if (error) throw error;
+    assertRequest(error, 'No se pudo guardar el tipo de evento');
   },
 
   async delete(type: CalendarEventType): Promise<void> {
@@ -1708,9 +1610,9 @@ export const calendarEventTypeService = {
       .update({ event_type: 'otro' })
       .eq('module_id', type.moduleId)
       .eq('event_type', type.code);
-    if (eventError) throw eventError;
+    assertRequest(eventError, 'No se pudieron reasignar los eventos del tipo eliminado');
     const { error } = await supabase.from('calendar_event_types').delete().eq('id', type.id);
-    if (error) throw error;
+    assertRequest(error, 'No se pudo eliminar el tipo de evento');
   },
 };
 
