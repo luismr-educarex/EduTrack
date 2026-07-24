@@ -15,7 +15,7 @@ export interface Module {
   code: string;
   cycle: string;
   course?: string;
-  deliveryMode: 'in_person' | 'online';
+  deliveryMode: 'in_person' | 'online' | 'intermodular';
   evaluationCount: number;
   totalStudents: number;
 }
@@ -270,6 +270,12 @@ function assertRequest(error: any, operation: string) {
   if (error) throw new Error(`${operation}: ${error.message || 'error de base de datos'}`);
 }
 
+function getLocalModuleMode(moduleId: string): Module['deliveryMode'] | null {
+  if (typeof window === 'undefined') return null;
+  const value = window.localStorage.getItem(`edutrack-module-mode:${moduleId}`);
+  return value === 'intermodular' ? value : null;
+}
+
 export const foundationService = {
   async claimLegacyData(): Promise<number> {
     const supabase = createClient();
@@ -297,7 +303,13 @@ export const moduleService = {
         code: r.code,
         cycle: r.cycle,
         course: r.course,
-        deliveryMode: r.delivery_mode === 'online' ? 'online' : 'in_person',
+        deliveryMode:
+          getLocalModuleMode(r.id) ??
+          (r.delivery_mode === 'online'
+            ? 'online'
+            : r.delivery_mode === 'intermodular'
+              ? 'intermodular'
+              : 'in_person'),
         evaluationCount: r.evaluation_count,
         totalStudents: r.total_students,
       }));
@@ -326,14 +338,28 @@ export const moduleService = {
       )
       .select()
       .single();
+    if (
+      error &&
+      module.deliveryMode === 'intermodular' &&
+      /delivery_mode|check constraint|violates check/i.test(error.message || '')
+    ) {
+      window.localStorage.setItem(`edutrack-module-mode:${module.id}`, 'intermodular');
+      return module;
+    }
     assertRequest(error, 'No se pudo guardar el módulo');
+    window.localStorage.removeItem(`edutrack-module-mode:${module.id}`);
     return {
       id: data.id,
       name: data.name,
       code: data.code,
       cycle: data.cycle,
       course: data.course,
-      deliveryMode: data.delivery_mode === 'online' ? 'online' : 'in_person',
+      deliveryMode:
+        data.delivery_mode === 'online'
+          ? 'online'
+          : data.delivery_mode === 'intermodular'
+            ? 'intermodular'
+            : 'in_person',
       evaluationCount: data.evaluation_count,
       totalStudents: data.total_students,
     };

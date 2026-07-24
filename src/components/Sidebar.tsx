@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import {
   LayoutDashboard,
@@ -32,6 +32,9 @@ import {
   History,
   PenSquare,
   Laptop,
+  KanbanSquare,
+  CheckSquare,
+  BarChart3,
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -143,23 +146,99 @@ const IN_PERSON_NAV_ITEMS: NavItem[] = [
 
 const ONLINE_NAV_ITEMS: NavItem[] = [
   { key: 'online-dashboard', label: 'Dashboard', href: '/', icon: <LayoutDashboard size={18} /> },
-  { key: 'online-students', label: 'Alumnos', href: '/students-tutoring', icon: <Users size={18} /> },
-  { key: 'online-activities', label: 'Actividades', href: '/activities', icon: <BookOpen size={18} /> },
-  { key: 'online-ai-evaluation', label: 'Evaluación IA', href: '/corrections', icon: <Bot size={18} /> },
-  { key: 'online-manual-evaluation', label: 'Evaluación Manual', href: '/grading', icon: <PenSquare size={18} /> },
+  {
+    key: 'online-students',
+    label: 'Alumnos',
+    href: '/students-tutoring',
+    icon: <Users size={18} />,
+  },
+  {
+    key: 'online-activities',
+    label: 'Actividades',
+    href: '/activities',
+    icon: <BookOpen size={18} />,
+  },
+  {
+    key: 'online-ai-evaluation',
+    label: 'Evaluación IA',
+    href: '/corrections',
+    icon: <Bot size={18} />,
+  },
+  {
+    key: 'online-manual-evaluation',
+    label: 'Evaluación Manual',
+    href: '/grading',
+    icon: <PenSquare size={18} />,
+  },
   { key: 'online-history', label: 'Historial', href: '/reports', icon: <History size={18} /> },
-  { key: 'online-settings', label: 'Configuración', href: '/course-management', icon: <Settings size={18} /> },
+  {
+    key: 'online-settings',
+    label: 'Configuración',
+    href: '/course-management',
+    icon: <Settings size={18} />,
+  },
+];
+
+const INTERMODULAR_NAV_ITEMS: NavItem[] = [
+  {
+    key: 'project-overview',
+    label: 'Vista general',
+    href: '/intermodular-project?view=overview',
+    icon: <LayoutDashboard size={18} />,
+  },
+  {
+    key: 'project-deliveries',
+    label: 'Entregas',
+    href: '/intermodular-project?view=deliveries',
+    icon: <KanbanSquare size={18} />,
+  },
+  {
+    key: 'project-students',
+    label: 'Alumnos',
+    href: '/intermodular-project?view=students',
+    icon: <Users size={18} />,
+  },
+  {
+    key: 'project-correction',
+    label: 'Corregir',
+    href: '/intermodular-project?view=correction',
+    icon: <PenSquare size={18} />,
+  },
+  {
+    key: 'project-checklist',
+    label: 'Checklist',
+    href: '/intermodular-project?view=checklist',
+    icon: <CheckSquare size={18} />,
+  },
+  {
+    key: 'project-statistics',
+    label: 'Estadísticas',
+    href: '/intermodular-project?view=statistics',
+    icon: <BarChart3 size={18} />,
+  },
+  {
+    key: 'project-settings',
+    label: 'Configuración',
+    href: '/intermodular-project?view=settings',
+    icon: <Settings size={18} />,
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { activeModule, modules, setActiveModuleId } = useEduTrack();
   const { signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [moduleOpen, setModuleOpen] = useState(false);
   const isOnlineModule = activeModule?.deliveryMode === 'online';
-  const navItems = isOnlineModule ? ONLINE_NAV_ITEMS : IN_PERSON_NAV_ITEMS;
+  const isIntermodularModule = activeModule?.deliveryMode === 'intermodular';
+  const navItems = isIntermodularModule
+    ? INTERMODULAR_NAV_ITEMS
+    : isOnlineModule
+      ? ONLINE_NAV_ITEMS
+      : IN_PERSON_NAV_ITEMS;
 
   // Auto-expand planning section if on a child route
   const planningChildPaths = [
@@ -172,7 +251,14 @@ export default function Sidebar() {
     planningChildPaths.some((p) => pathname.startsWith(p))
   );
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  const isActive = (href: string) => {
+    const [path, query] = href.split('?');
+    if (path === '/') return pathname === '/';
+    if (!pathname.startsWith(path)) return false;
+    if (!query) return true;
+    const expected = new URLSearchParams(query);
+    return Array.from(expected.entries()).every(([key, value]) => searchParams.get(key) === value);
+  };
   const isPlanningActive = planningChildPaths.some((p) => isActive(p));
 
   return (
@@ -229,7 +315,9 @@ export default function Sidebar() {
                   {activeModule?.code ?? 'Módulo'}
                 </span>
                 <span className="text-[10px] text-muted-foreground block truncate">
-                  {activeModule ? `${activeModule.cycle} · ${isOnlineModule ? 'Online' : 'Presencial'}` : 'Cargando…'}
+                  {activeModule
+                    ? `${activeModule.cycle} · ${isOnlineModule ? 'Online' : isIntermodularModule ? 'Intermodular' : 'Presencial'}`
+                    : 'Cargando…'}
                 </span>
               </div>
               <ChevronRight
@@ -247,13 +335,28 @@ export default function Sidebar() {
                     onClick={() => {
                       setActiveModuleId(mod.id);
                       setModuleOpen(false);
-                      router.push('/');
+                      router.push(
+                        mod.deliveryMode === 'intermodular'
+                          ? '/intermodular-project?view=overview'
+                          : '/'
+                      );
                     }}
                   >
                     <span className="text-xs font-semibold w-8 flex-shrink-0">{mod.code}</span>
                     <span className="text-xs truncate">{mod.name}</span>
                     {mod.deliveryMode === 'online' && (
-                      <Laptop size={12} className="ml-auto flex-shrink-0 text-primary" aria-label="Online" />
+                      <Laptop
+                        size={12}
+                        className="ml-auto flex-shrink-0 text-primary"
+                        aria-label="Online"
+                      />
+                    )}
+                    {mod.deliveryMode === 'intermodular' && (
+                      <KanbanSquare
+                        size={12}
+                        className="ml-auto flex-shrink-0 text-primary"
+                        aria-label="Proyecto intermodular"
+                      />
                     )}
                   </button>
                 ))}
@@ -266,7 +369,11 @@ export default function Sidebar() {
         <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin">
           {!collapsed && (
             <p className="px-4 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-              {isOnlineModule ? 'EduCodeCheck · Online' : 'Navegación presencial'}
+              {isOnlineModule
+                ? 'EduCodeCheck · Online'
+                : isIntermodularModule
+                  ? 'EduProyectosCheck'
+                  : 'Navegación presencial'}
             </p>
           )}
           <ul className="space-y-0.5 px-2">
