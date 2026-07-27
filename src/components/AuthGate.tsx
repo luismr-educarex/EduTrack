@@ -4,11 +4,17 @@ import { FormEvent, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AppLogo from '@/components/ui/AppLogo';
 
+const usesSitesManagedAuth = process.env.NEXT_PUBLIC_SITES_AUTH === 'true';
+
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [accessKey, setAccessKey] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Production Sites already enforces its owner/workspace access policy before
+  // forwarding the request, so a second application password is unnecessary.
+  if (usesSitesManagedAuth) return children;
 
   if (loading) {
     return <main className="min-h-screen grid place-items-center bg-muted/30"><p className="text-sm text-muted-foreground">Comprobando sesión…</p></main>;
