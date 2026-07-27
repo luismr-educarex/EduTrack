@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
-import { headers } from 'next/headers';
 import '../styles/tailwind.css';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -27,37 +26,13 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host');
-  const protocol = requestHeaders.get('x-forwarded-proto') ?? 'https';
-  const baseUrl = host ? `${protocol}://${host}` : 'http://localhost:4028';
-  const title = 'EduTrack — Planificación Docente y Evaluación Criterial FP';
-  const description =
-    'EduTrack ayuda a docentes de FP a planificar módulos, evaluar por criterios y sincronizar las entregas online con MoodleSync.';
-  const socialImage = new URL('/og.png', baseUrl).toString();
-
-  return {
-    metadataBase: new URL(baseUrl),
-    title,
-    description,
-    icons: {
-      icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
-    },
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      images: [{ url: socialImage, width: 1536, height: 1024, alt: 'EduTrack · MoodleSync para módulos online' }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [socialImage],
-    },
-  };
-}
+export const metadata: Metadata = {
+  title: 'EduTrack — Planificación Docente y Evaluación Criterial FP',
+  description: 'EduTrack ayuda a docentes de FP a planificar módulos, gestionar criterios de evaluación, calificar alumnado y hacer seguimiento del progreso del grupo.',
+  icons: {
+    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
+  },
+};
 
 export default function RootLayout({
   children,
