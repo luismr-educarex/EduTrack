@@ -35,6 +35,7 @@ import {
   KanbanSquare,
   CheckSquare,
   BarChart3,
+  RefreshCcw,
 } from 'lucide-react';
 import { useEduTrack } from '@/contexts/EduTrackContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -243,6 +244,18 @@ const ONLINE_NAV_SECTIONS: NavSection[] = [
         icon: <PenSquare size={18} />,
       },
       { key: 'online-history', label: 'Historial', href: '/reports', icon: <History size={18} /> },
+    ],
+  },
+  {
+    key: 'moodle-sync',
+    label: 'MoodleSync',
+    items: [
+      {
+        key: 'online-moodle-sync',
+        label: 'Sincronización',
+        href: '/moodle-sync',
+        icon: <RefreshCcw size={18} />,
+      },
     ],
   },
   {
