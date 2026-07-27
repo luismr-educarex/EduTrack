@@ -7,7 +7,9 @@ node_modules/
 out/
 
 # Production build
-build/
+dist/
+.vinext/
+.wrangler/
 
 # Logs
 npm-debug.log*
