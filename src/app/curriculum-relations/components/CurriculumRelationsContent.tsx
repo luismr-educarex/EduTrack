@@ -51,7 +51,8 @@ function RATreeView({ search }: { search: string }) {
 
   const toggle = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
     return n;
   });
 
@@ -171,7 +172,8 @@ function UTTreeView({ search }: { search: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['ut-1']));
   const toggle = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
     return n;
   });
 
@@ -284,7 +286,8 @@ function ActivityMapView({ search }: { search: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['act-1']));
   const toggle = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
     return n;
   });
 
@@ -382,7 +385,8 @@ function EvalTreeView({ search }: { search: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['eval-1']));
   const toggle = (id: string) => setExpanded(prev => {
     const n = new Set(prev);
-    n.has(id) ? n.delete(id) : n.add(id);
+    if (n.has(id)) n.delete(id);
+    else n.add(id);
     return n;
   });
 

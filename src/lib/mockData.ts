@@ -124,7 +124,7 @@ export interface RARelationship {
   description?: string; // Optional explanation of the relationship
 }
 
-export let RA_RELATIONSHIPS: RARelationship[] = [
+export const RA_RELATIONSHIPS: RARelationship[] = [
   {
     id: 'rel-1',
     raSourceId: 'ra-1',

@@ -12,7 +12,7 @@ vi.mock('@/lib/domain/criterionGrading', () => ({
   validateRubricLevels: vi.fn(),
 }));
 
-import { moduleService, type Module } from './edutrackService';
+import { moduleService, seatLayoutService, type Module } from './edutrackService';
 
 const intermodularModule: Module = {
   id: 'module-new',
@@ -112,5 +112,42 @@ describe('moduleService CRUD integrity', () => {
       'No se pudo eliminar el módulo: delete blocked'
     );
     expect(localStorage.removeItem).not.toHaveBeenCalled();
+  });
+});
+
+describe('seatLayoutService atomic persistence', () => {
+  it('delega la sustitución completa en una única operación transaccional', async () => {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    createClientMock.mockReturnValue({ rpc });
+
+    await seatLayoutService.save({
+      moduleId: 'module-1',
+      rows: 4,
+      columns: 6,
+      assignments: { 'seat-1': 'student-1', 'seat-2': 'student-2' },
+    });
+
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(rpc).toHaveBeenCalledWith('save_seat_layout', {
+      p_module_id: 'module-1',
+      p_rows: 4,
+      p_columns: 6,
+      p_assignments: { 'seat-1': 'student-1', 'seat-2': 'student-2' },
+    });
+  });
+
+  it('propaga el fallo transaccional al consumidor', async () => {
+    createClientMock.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ error: { message: 'invalid assignment' } }),
+    });
+
+    await expect(
+      seatLayoutService.save({
+        moduleId: 'module-1',
+        rows: 3,
+        columns: 5,
+        assignments: { 'seat-1': 'missing-student' },
+      })
+    ).rejects.toThrow('No se pudo guardar el plano del aula: invalid assignment');
   });
 });
