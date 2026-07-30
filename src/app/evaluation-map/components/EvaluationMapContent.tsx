@@ -291,7 +291,8 @@ export default function EvaluationMapContent() {
   const toggleMoment = (key: MomentKey) => {
     setExpandedMoments(prev => {
       const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
@@ -299,7 +300,8 @@ export default function EvaluationMapContent() {
   const toggleRA = (raId: string) => {
     setExpandedRAs(prev => {
       const next = new Set(prev);
-      next.has(raId) ? next.delete(raId) : next.add(raId);
+      if (next.has(raId)) next.delete(raId);
+      else next.add(raId);
       return next;
     });
   };

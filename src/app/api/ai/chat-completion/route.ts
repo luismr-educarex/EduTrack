@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { completion } from '@rocketnew/llm-sdk';
 import { getAuthenticatedUser } from '@/lib/supabase/server';
+import {
+  validateCompletionRequest,
+  type SupportedProvider,
+} from '@/lib/ai/completionRequest';
 
 const API_KEYS: Record<string, string | undefined> = {
   OPEN_AI: process.env.OPENAI_API_KEY,
@@ -9,7 +13,7 @@ const API_KEYS: Record<string, string | undefined> = {
   PERPLEXITY: process.env.PERPLEXITY_API_KEY,
 };
 
-function formatErrorResponse(error: unknown, provider?: string) {
+function formatErrorResponse(error: unknown, provider?: SupportedProvider) {
   const statusCode = (error as any)?.statusCode || (error as any)?.status || 500;
   const providerName = (error as any)?.llmProvider || provider || 'Unknown';
 
@@ -21,22 +25,24 @@ function formatErrorResponse(error: unknown, provider?: string) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: any = {};
+  let provider: SupportedProvider | undefined;
 
   try {
     if (!await getAuthenticatedUser()) {
       return NextResponse.json({ error: 'Autenticación requerida.' }, { status: 401 });
     }
 
-    body = await request.json();
-    const { provider, model, messages, stream = false, parameters = {} } = body;
-
-    if (!provider || !model || !messages?.length) {
+    let requestData;
+    try {
+      requestData = validateCompletionRequest(await request.json());
+    } catch (error) {
       return NextResponse.json(
-        { error: 'Missing required fields: provider, model, messages', details: 'Request validation failed' },
+        { error: error instanceof Error ? error.message : 'Solicitud no válida.' },
         { status: 400 }
       );
     }
+    ({ provider } = requestData);
+    const { model, messages, stream, parameters } = requestData;
 
     const apiKey = API_KEYS[provider];
     if (!apiKey) {
@@ -48,11 +54,11 @@ export async function POST(request: NextRequest) {
 
     if (stream) {
       const response = await completion({
+        ...parameters,
         model,
         messages,
         stream: true,
         api_key: apiKey,
-        ...parameters,
       });
 
       const encoder = new TextEncoder();
@@ -86,16 +92,16 @@ export async function POST(request: NextRequest) {
     }
 
     const response = await completion({
+      ...parameters,
       model,
       messages,
       stream: false,
       api_key: apiKey,
-      ...parameters,
     });
 
     return NextResponse.json(response);
   } catch (error) {
-    const formatted = formatErrorResponse(error, body?.provider);
+    const formatted = formatErrorResponse(error, provider);
     console.error('API Route Error:', { error: formatted.error, details: formatted.details });
     return NextResponse.json(
       { error: formatted.error, details: formatted.details },

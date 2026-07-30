@@ -1684,32 +1684,13 @@ export const seatLayoutService = {
 
   async save(layout: SeatLayout): Promise<void> {
     const supabase = createClient();
-    const { error: layoutError } = await supabase.from('seat_layouts').upsert(
-      {
-        module_id: layout.moduleId,
-        rows: layout.rows,
-        columns: layout.columns,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'module_id' }
-    );
-    assertRequest(layoutError, 'No se pudo guardar el plano del aula');
-
-    const { error: deleteError } = await supabase
-      .from('seat_assignments')
-      .delete()
-      .eq('module_id', layout.moduleId);
-    assertRequest(deleteError, 'No se pudieron actualizar los puestos');
-    const rows = Object.entries(layout.assignments).map(([seatId, studentId]) => ({
-      module_id: layout.moduleId,
-      student_id: studentId,
-      seat_id: seatId,
-      updated_at: new Date().toISOString(),
-    }));
-    if (rows.length) {
-      const { error: insertError } = await supabase.from('seat_assignments').insert(rows);
-      assertRequest(insertError, 'No se pudieron guardar los puestos');
-    }
+    const { error } = await supabase.rpc('save_seat_layout', {
+      p_module_id: layout.moduleId,
+      p_rows: layout.rows,
+      p_columns: layout.columns,
+      p_assignments: layout.assignments,
+    });
+    assertRequest(error, 'No se pudo guardar el plano del aula');
   },
 };
 
